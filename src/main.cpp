@@ -1,11 +1,15 @@
-#include <unistd.h>	// getopt
+#include <sys/stat.h>
+#include <unistd.h>	// getopt, S_ISDIR
 #include <chrono>		 // high_resolution_clock
 #include <iostream>	// cout
+#include <fstream> // ifstream, ofstream
+#include <sstream> // stringstream
 #include <ratio>		 // milli
 
 #include "floyd_warshall.h"
 
 void print_usage();
+std::string get_solution_filename(int n, double p, unsigned long seed);
 
 int main(int argc, char* argv[]) {
   unsigned long seed;
@@ -47,18 +51,24 @@ int main(int argc, char* argv[]) {
   }
 
   if (use_floyd_warshall) {
-    std::cout << "Generating " << n << "x" << n << " adjacency matrix with seed " << seed << "\n";
+    std::cout << "\nGenerating " << n << "x" << n << " adjacency matrix with seed " << seed << "\n";
+
+    bool write_solution_to_file = true;
 
     // have we cached the solution before?
-    bool solution_available = false;
+    std::string solution_filename = get_solution_filename(n, p, seed);
+    bool solution_available = stat(solution_filename.c_str(), nullptr) != -1 && errno != ENOENT;
 
-    int* solution;
+    int* solution = new int[n * n];
     if (solution_available) {
       std::cout << "Reading reference solution from file\n";
+
+      std::ifstream in(solution_filename, std::ios::in | std::ios::binary);
+      in.read(reinterpret_cast<char*>(solution), n * n * sizeof(int));
+      in.close();
     } else {
       std::cout << "Solving APSP with Floyd-Warshall sequentially for reference solution\n";
 
-      solution = new int[n * n];
       int* matrix = floyd_warshall_init(n, p, seed);
 
       auto start = std::chrono::high_resolution_clock::now();
@@ -67,15 +77,24 @@ int main(int argc, char* argv[]) {
 
       auto end = std::chrono::high_resolution_clock::now();
       std::chrono::duration<double, std::milli> start_to_end = end - start;
-      std::cout << "Algorithm runtime: " << start_to_end.count() << "ms\n\n";
+      std::cout << "Algorithm runtime: " << start_to_end.count() << "ms\n";
 
-      if (false) {
+      if (write_solution_to_file) {
         std::cout << "Writing solution to file\n";
+
+        if (system("mkdir -p solution_cache") == -1) {
+          std::cerr << "mkdir failed!";
+          return -1;
+        }
+
+        std::ofstream out(solution_filename, std::ios::out | std::ios::binary);
+        out.write(reinterpret_cast<const char*>(solution), n * n * sizeof(int));
+        out.close();
       }
     }
 
     int* output = new int[n * n];
-    std::cout << "Solving APSP with Floyd-Warshall blocked sequentially\n";
+    std::cout << "\nSolving APSP with Floyd-Warshall blocked sequentially\n";
 
     int* matrix = floyd_warshall_init(n, p, seed);
 
@@ -98,9 +117,7 @@ int main(int argc, char* argv[]) {
     }
 
     delete[] matrix;
-    if (!solution_available) {
-      delete[] solution;
-    }
+    delete[] solution;
     delete[] output;
   } else {
   }
@@ -109,11 +126,19 @@ int main(int argc, char* argv[]) {
 }
 
 void print_usage() {
-  std::cout << "\nUsage: asap [-a (f|j)] [-s seed]\n";
-  std::cout << "\t-h\tPrint this message\n";
-  std::cout << "\t-a\tAlgorithm to use for all pairs shortest path\n";
-  std::cout << "\t\t\tf: Floyd-Warshall (default)\n";
-  std::cout << "\t\t\tj: Johnson's Algorithm\n";
-  std::cout << "\t-s\tSeed for graph generation\n";
+  std::cout << "\nUsage: asap [-n INT] [-p DOUBLE] [-a (f|j)] [-s ULONG]\n";
+  std::cout << "\t-h\t\tPrint this message\n";
+  std::cout << "\t-n INT\t\tGraph size, default 1000\n";
+  std::cout << "\t-p DOUBLE\t\tProbability of edge from a given node to another (0.0 to 1.0), default 0.5\n";
+  std::cout << "\t-a CHAR\t\tAlgorithm to use for all pairs shortest path\n";
+  std::cout << "\t\t\t\tf: Floyd-Warshall (default)\n";
+  std::cout << "\t\t\t\tj: Johnson's Algorithm\n";
+  std::cout << "\t-s ULONG\t\tSeed for graph generation\n";
   std::cout << "\n";
+}
+
+std::string get_solution_filename(int n, double p, unsigned long seed) {
+  std::stringstream solution_filename;
+  solution_filename << "solution_cache/fw-sol-n"<< n << "-p" << p << "-s" << seed << ".bin";
+  return solution_filename.str();
 }
