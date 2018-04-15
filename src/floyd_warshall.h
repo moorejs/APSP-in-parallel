@@ -40,10 +40,10 @@ inline void floyd_warshall(const int* input, int* output, const int n) {
   }
 }
 
-inline void floyd_warshall_in_place(int* C, const int* A, const int* B, const int n) {
-  for (int k = 0; k < n; k++) {
-    for (int j = 0; j < n; j++) {
-      for (int i = 0; i < n; i++) {
+inline void floyd_warshall_in_place(int* C, const int* A, const int* B, const int b, const int n) {
+  for (int k = 0; k < b; k++) {
+    for (int j = 0; j < b; j++) {
+      for (int i = 0; i < b; i++) {
         if (C[i*n + j] > A[i*n + k] + B[k*n + j]) {
           C[i*n + j] = A[i*n + k] + B[k*n + j];
         }
@@ -62,17 +62,17 @@ inline void floyd_warshall_blocked(const int* input, int* output, const int n, c
   // note that [i][j] == [i * input_width * block_width + j * block_width]
 
   for (int k = 0; k < blocks; k++) {
-    floyd_warshall_in_place(&output[k*b*n + k*b], &output[k*b*n + k*b], &output[k*b*n + k*b], b);
+    floyd_warshall_in_place(&output[k*b*n + k*b], &output[k*b*n + k*b], &output[k*b*n + k*b], b, n);
     for (int j = 0; j < blocks; j++) {
       if (j == k) continue;
-      floyd_warshall_in_place(&output[k*b*n + j*b], &output[k*b*n + k*b], &output[k*b*n + j*b], b);
+      floyd_warshall_in_place(&output[k*b*n + j*b], &output[k*b*n + k*b], &output[k*b*n + j*b], b, n);
     }
     for (int i = 0; i < blocks; i++) {
       if (i == k) continue;
-      floyd_warshall_in_place(&output[i*b*n + k*b], &output[i*b*n + k*b], &output[k*b*n + k*b], b);
+      floyd_warshall_in_place(&output[i*b*n + k*b], &output[i*b*n + k*b], &output[k*b*n + k*b], b, n);
       for (int j = 0; j < blocks; j++) {
         if (j == k) continue;
-        floyd_warshall_in_place(&output[i*b*n + j*b], &output[i*b*n + k*b], &output[k*b*n + j*b], b);
+        floyd_warshall_in_place(&output[i*b*n + j*b], &output[i*b*n + k*b], &output[k*b*n + j*b], b, n);
       }
     }
   }

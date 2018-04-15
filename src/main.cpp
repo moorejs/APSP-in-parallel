@@ -18,13 +18,16 @@ int main(int argc, char* argv[]) {
   int n = 1000;
   double p = 0.5;
   bool use_floyd_warshall = true;
+  int bench_count = 1;
   bool check_correctness = false;
 
   extern char* optarg;
   int opt;
-  while ((opt = getopt(argc, argv, "han::p:s:c")) != -1) {
+  while ((opt = getopt(argc, argv, "han::p:s:b:c")) != -1) {
     switch (opt) {
       case 'h':
+      case '?': // illegal command
+      case ':': // forgot command's argument
         print_usage();
         return 0;
 
@@ -49,6 +52,10 @@ int main(int argc, char* argv[]) {
         seed = std::stoul(optarg);
         break;
 
+      case 'b':
+        bench_count = std::stoi(optarg);
+        break;
+
       case 'c':
         check_correctness = true;
         break;
@@ -64,7 +71,7 @@ int main(int argc, char* argv[]) {
 
       // have we cached the solution before?
       std::string solution_filename = get_solution_filename("fw", n, p, seed);
-      bool solution_available = stat(solution_filename.c_str(), nullptr) != -1 && errno != ENOENT;
+      bool solution_available = stat(solution_filename.c_str(), nullptr) != -1 || errno != ENOENT;
 
       solution = new int[n * n];
       if (solution_available) {
@@ -106,13 +113,15 @@ int main(int argc, char* argv[]) {
 
     int* matrix = floyd_warshall_init(n, p, seed);
 
-    auto start = std::chrono::high_resolution_clock::now();
-
-    floyd_warshall_blocked(matrix, output, n, 32);
-
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double, std::milli> start_to_end = end - start;
-    std::cout << "Algorithm runtime: " << start_to_end.count() << "ms\n\n";
+    double total_time = 0.0;
+    for (int b = 0; b < bench_count; b++) {
+      auto start = std::chrono::high_resolution_clock::now();
+      floyd_warshall_blocked(matrix, output, n, 64);
+      auto end = std::chrono::high_resolution_clock::now();
+      std::chrono::duration<double, std::milli> start_to_end = end - start;
+      total_time += start_to_end.count();
+    }
+    std::cout << "Algorithm runtime: " << total_time / bench_count << "ms\n\n";
 
     if (check_correctness) {
       for (int i = 0; i < n; i++) {
@@ -137,14 +146,15 @@ int main(int argc, char* argv[]) {
 }
 
 void print_usage() {
-  std::cout << "\nUsage: asap [-n INT] [-p DOUBLE] [-a (f|j)] [-s ULONG] [-c]\n";
+  std::cout << "\nUsage: asap [-n INT] [-p DOUBLE] [-a (f|j)] [-s LONG] [-b INT] [-c]\n";
   std::cout << "\t-h\t\tPrint this message\n";
   std::cout << "\t-n INT\t\tGraph size, default 1000\n";
   std::cout << "\t-p DOUBLE\t\tProbability of edge from a given node to another (0.0 to 1.0), default 0.5\n";
   std::cout << "\t-a CHAR\t\tAlgorithm to use for all pairs shortest path\n";
   std::cout << "\t\t\t\tf: Floyd-Warshall (default)\n";
   std::cout << "\t\t\t\tj: Johnson's Algorithm\n";
-  std::cout << "\t-s ULONG\t\tSeed for graph generation\n";
+  std::cout << "\t-s LONG\t\tSeed for graph generation\n";
+  std::cout << "\t-b INT\t\tNumber of times to run the benchmark, default 1\n";
   std::cout << "\t-c\t\tCheck correctness\n";
   std::cout << "\n";
 }
