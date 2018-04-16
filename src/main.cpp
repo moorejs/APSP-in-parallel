@@ -6,8 +6,9 @@
 #include <sstream> // stringstream
 #include <ratio>		 // milli
 
+#include "util.h"
+#include "johnson.h"
 #include "floyd_warshall.h"
-
 void print_usage();
 std::string get_solution_filename(std::string prefix, int n, double p, unsigned long seed);
 
@@ -40,10 +41,6 @@ int main(int argc, char* argv[]) {
         }
         break;
 
-      case 'n':
-        n = std::stoi(optarg);
-        break;
-
       case 'p':
         p = std::stod(optarg);
         break;
@@ -56,6 +53,10 @@ int main(int argc, char* argv[]) {
         bench_count = std::stoi(optarg);
         break;
 
+      case 'n':
+        n = std::stoi(optarg);
+        break;
+        
       case 'd':
         block_size = std::stoi(optarg);
         break;
@@ -66,7 +67,6 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  if (use_floyd_warshall) {
     std::cout << "\nGenerating " << n << "x" << n << " adjacency matrix with seed " << seed << "\n";
 
     int* solution = nullptr;
@@ -113,10 +113,12 @@ int main(int argc, char* argv[]) {
       }
     }
 
-    int* output = new int[n * n];
-    std::cout << "\nSolving APSP with Floyd-Warshall blocked sequentially\n";
+
+  if (use_floyd_warshall) {
 
     int* matrix = floyd_warshall_init(n, p, seed);
+    int* output = new int[n * n];
+    std::cout << "\nSolving APSP with Floyd-Warshall blocked sequentially\n";
 
     double total_time = 0.0;
     for (int b = 0; b < bench_count; b++) {
@@ -128,23 +130,35 @@ int main(int argc, char* argv[]) {
     }
     std::cout << "Algorithm runtime: " << total_time / bench_count << "ms\n\n";
 
-    if (check_correctness) {
-      for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-          if (output[i*n + j] != solution[i*n + j]) {
-            std::cerr << "Output did not match at [" << i << "][" << j << "]: " << output[i*n+j] 
-                << " vs solution's " << solution[i*n+j] << "!\n";
-          }
-        }
-      }
-    }
+    if (check_correctness) correctness_check(output, solution, n);
 
     delete[] matrix;
     delete[] output;
-    if (check_correctness) {
-      delete[] solution;
+
+  } else {  // Using Johnson's Algorithm
+    std::cout << "Solving APSP with Johnson's sequentially" << "\n";
+    int *matrix_john = johnson_init(n, p, seed);
+    //Graph_t *graph_john = johnson_init2(n, p, seed);
+    int *output = new int[n * n];
+
+    double total_time = 0.0;
+    for (int b = 0; b < bench_count; b++) {
+      auto start = std::chrono::high_resolution_clock::now();
+      johnson(matrix_john, output, n);
+      //johnson2(graph_john, output, n);
+      auto end = std::chrono::high_resolution_clock::now();
+      std::chrono::duration<double, std::milli> start_to_end = end - start;
+      total_time += start_to_end.count();
     }
-  } else {
+    std::cout << "Algorithm runtime: " << total_time / bench_count << "ms\n\n";
+
+    if (check_correctness) correctness_check(output, solution, n);
+    delete[] matrix_john;
+    delete[] output;
+  }
+
+  if (check_correctness) {
+    delete[] solution;
   }
 
   return 0;

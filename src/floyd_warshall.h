@@ -1,7 +1,8 @@
 #include <cstring> // memcpy
 #include <random>		 // mt19937_64, uniform_x_distribution
+#include <climits>
 
-// we need this to initialized to 0 on the diagonal, infinity anywhere there is no edge 
+// we need this to initialized to 0 on the diagonal, infinity anywhere there is no edge
 inline int* floyd_warshall_init(const int n, const int p, const unsigned long seed) {
   static std::uniform_real_distribution<double> flip(0, 1);
   // TODO: create negative edges without negative cycles
@@ -17,7 +18,7 @@ inline int* floyd_warshall_init(const int n, const int p, const unsigned long se
       } else if (flip(rand_engine) > p) {
         out[i*n + j] = choose_weight(rand_engine);
       } else {
-        out[i*n + j] = 999999999; // infinity
+        out[i*n + j] = INT_MAX; // infinity
       }
     }
   }
@@ -42,10 +43,12 @@ inline void floyd_warshall(const int* input, int* output, const int n) {
 
 inline void floyd_warshall_in_place(int* C, const int* A, const int* B, const int b, const int n) {
   for (int k = 0; k < b; k++) {
+    int kth = k*n;
     for (int j = 0; j < b; j++) {
       for (int i = 0; i < b; i++) {
-        if (C[i*n + j] > A[i*n + k] + B[k*n + j]) {
-          C[i*n + j] = A[i*n + k] + B[k*n + j];
+        int sum = A[i*n + k] + B[kth + j];
+        if (C[i*n + j] > sum) {
+          C[i*n + j] = sum;
         }
       }
     }
@@ -60,7 +63,6 @@ inline void floyd_warshall_blocked(const int* input, int* output, const int n, c
   const int blocks = n / b;
 
   // note that [i][j] == [i * input_width * block_width + j * block_width]
-
   for (int k = 0; k < blocks; k++) {
     floyd_warshall_in_place(&output[k*b*n + k*b], &output[k*b*n + k*b], &output[k*b*n + k*b], b, n);
     for (int j = 0; j < blocks; j++) {
