@@ -2,3 +2,6 @@ bin/*
 build/*
 
 .vscode/*
+
+solution_cache/*
+apsp

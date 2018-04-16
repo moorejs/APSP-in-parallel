@@ -15,15 +15,16 @@ int main(int argc, char* argv[]) {
   unsigned long seed;
 
   // parameter defaults
-  int n = 1000;
+  int n = 1024;
   double p = 0.5;
   bool use_floyd_warshall = true;
   int bench_count = 1;
   bool check_correctness = false;
+  int block_size = 32;
 
   extern char* optarg;
   int opt;
-  while ((opt = getopt(argc, argv, "han::p:s:b:c")) != -1) {
+  while ((opt = getopt(argc, argv, "han::p:s:b:d:c")) != -1) {
     switch (opt) {
       case 'h':
       case '?': // illegal command
@@ -54,6 +55,10 @@ int main(int argc, char* argv[]) {
 
       case 'b':
         bench_count = std::stoi(optarg);
+        break;
+
+      case 'd':
+        block_size = std::stoi(optarg);
         break;
 
       case 'c':
@@ -116,7 +121,7 @@ int main(int argc, char* argv[]) {
     double total_time = 0.0;
     for (int b = 0; b < bench_count; b++) {
       auto start = std::chrono::high_resolution_clock::now();
-      floyd_warshall_blocked(matrix, output, n, 64);
+      floyd_warshall_blocked(matrix, output, n, block_size);
       auto end = std::chrono::high_resolution_clock::now();
       std::chrono::duration<double, std::milli> start_to_end = end - start;
       total_time += start_to_end.count();
@@ -148,7 +153,7 @@ int main(int argc, char* argv[]) {
 void print_usage() {
   std::cout << "\nUsage: asap [-n INT] [-p DOUBLE] [-a (f|j)] [-s LONG] [-b INT] [-c]\n";
   std::cout << "\t-h\t\tPrint this message\n";
-  std::cout << "\t-n INT\t\tGraph size, default 1000\n";
+  std::cout << "\t-n INT\t\tGraph size, default 1024\n";
   std::cout << "\t-p DOUBLE\t\tProbability of edge from a given node to another (0.0 to 1.0), default 0.5\n";
   std::cout << "\t-a CHAR\t\tAlgorithm to use for all pairs shortest path\n";
   std::cout << "\t\t\t\tf: Floyd-Warshall (default)\n";
