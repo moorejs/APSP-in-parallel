@@ -12,9 +12,8 @@ void print_usage();
 std::string get_solution_filename(std::string prefix, int n, double p, unsigned long seed);
 
 int main(int argc, char* argv[]) {
-  unsigned long seed;
-
   // parameter defaults
+  unsigned long seed = 0;
   int n = 1024;
   double p = 0.5;
   bool use_floyd_warshall = true;
@@ -24,7 +23,7 @@ int main(int argc, char* argv[]) {
 
   extern char* optarg;
   int opt;
-  while ((opt = getopt(argc, argv, "han::p:s:b:d:c")) != -1) {
+  while ((opt = getopt(argc, argv, "ha:n:p:s:b:d:c")) != -1) {
     switch (opt) {
       case 'h':
       case '?': // illegal command
@@ -70,13 +69,14 @@ int main(int argc, char* argv[]) {
   if (use_floyd_warshall) {
     std::cout << "\nGenerating " << n << "x" << n << " adjacency matrix with seed " << seed << "\n";
 
-    int* solution;
+    int* solution = nullptr;
     if (check_correctness) {
       bool write_solution_to_file = true;
 
       // have we cached the solution before?
       std::string solution_filename = get_solution_filename("fw", n, p, seed);
-      bool solution_available = stat(solution_filename.c_str(), nullptr) != -1 || errno != ENOENT;
+      struct stat file_stat;
+      bool solution_available = stat(solution_filename.c_str(), &file_stat) != -1 || errno != ENOENT;
 
       solution = new int[n * n];
       if (solution_available) {
