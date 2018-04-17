@@ -1,16 +1,17 @@
-#include <sys/stat.h>
-#include <unistd.h>	// getopt, S_ISDIR
-#include <chrono>		 // high_resolution_clock
-#include <iostream>	// cout
+#include <sys/stat.h> // stat
+#include <unistd.h> // getopt
+#include <chrono> // high_resolution_clock
+#include <iostream> // cout
+#include <cstdio> // printf
 #include <fstream> // ifstream, ofstream
 #include <sstream> // stringstream
-#include <ratio>		 // milli
+#include <ratio>  // milli
 
 #include "util.h"
 #include "johnson.h"
 #include "floyd_warshall.h"
-void print_usage();
-std::string get_solution_filename(std::string prefix, int n, double p, unsigned long seed);
+
+void bench_floyd_warshall(double p, unsigned long seed, int block_size, bool check_correctness);
 
 int main(int argc, char* argv[]) {
   // parameter defaults
@@ -18,13 +19,13 @@ int main(int argc, char* argv[]) {
   int n = 1024;
   double p = 0.5;
   bool use_floyd_warshall = true;
-  int bench_count = 1;
+  bool benchmark = false;
   bool check_correctness = false;
   int block_size = 32;
 
   extern char* optarg;
   int opt;
-  while ((opt = getopt(argc, argv, "ha:n:p:s:b:d:c")) != -1) {
+  while ((opt = getopt(argc, argv, "ha:n:p:s:bd:c")) != -1) {
     switch (opt) {
       case 'h':
       case '?': // illegal command
@@ -50,7 +51,7 @@ int main(int argc, char* argv[]) {
         break;
 
       case 'b':
-        bench_count = std::stoi(optarg);
+        benchmark = true;
         break;
 
       case 'n':
@@ -115,25 +116,27 @@ int main(int argc, char* argv[]) {
 
 
   if (use_floyd_warshall) {
-
-    int* matrix = floyd_warshall_init(n, p, seed);
-    int* output = new int[n * n];
     std::cout << "\nSolving APSP with Floyd-Warshall blocked sequentially\n";
 
-    double total_time = 0.0;
-    for (int b = 0; b < bench_count; b++) {
+    int* matrix = nullptr;
+    int* output = nullptr;
+    if (benchmark) {
+      bench_floyd_warshall(p, seed, block_size, check_correctness);
+    } else {
+      matrix = floyd_warshall_init(n, p, seed);
+      output = new int[n * n];
+
       auto start = std::chrono::high_resolution_clock::now();
       floyd_warshall_blocked(matrix, output, n, block_size);
       auto end = std::chrono::high_resolution_clock::now();
       std::chrono::duration<double, std::milli> start_to_end = end - start;
-      total_time += start_to_end.count();
+      std::cout << "Algorithm runtime: " << start_to_end.count() << "ms\n\n";
+
+      if (check_correctness) correctness_check(output, solution, n);
+
+      delete[] matrix;
+      delete[] output;
     }
-    std::cout << "Algorithm runtime: " << total_time / bench_count << "ms\n\n";
-
-    if (check_correctness) correctness_check(output, solution, n);
-
-    delete[] matrix;
-    delete[] output;
 
   } else {  // Using Johnson's Algorithm
     std::cout << "Solving APSP with Johnson's sequentially" << "\n";
@@ -146,18 +149,11 @@ int main(int argc, char* argv[]) {
     Graph G(gr->edge_array, gr->edge_array + gr->E, gr->weights, gr->V);
     std::vector<int> d(num_vertices(G));
 
-    double total_time = 0.0;
-    for (int b = 0; b < bench_count; b++) {
-      auto start = std::chrono::high_resolution_clock::now();
-      //johnson(matrix_john, output, n);
-      //johnson2(graph_john, output, n);
-      std::vector<int> d(num_vertices(G));
-      johnson_all_pairs_shortest_paths(G, out, distance_map(&d[0]));
-      auto end = std::chrono::high_resolution_clock::now();
-      std::chrono::duration<double, std::milli> start_to_end = end - start;
-      total_time += start_to_end.count();
-    }
-    std::cout << "Algorithm runtime: " << total_time / bench_count << "ms\n\n";
+    auto start = std::chrono::high_resolution_clock::now();
+    johnson_all_pairs_shortest_paths(G, out, distance_map(&d[0]));
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> start_to_end = end - start;
+    std::cout << "Algorithm runtime: " << start_to_end.count() << "ms\n\n";
 
     int *output = new int[n * n];
     for (int i = 0; i < n; i++) {
@@ -178,22 +174,67 @@ int main(int argc, char* argv[]) {
   return 0;
 }
 
-void print_usage() {
-  std::cout << "\nUsage: asap [-n INT] [-p DOUBLE] [-a (f|j)] [-s LONG] [-b INT] [-c]\n";
-  std::cout << "\t-h\t\tPrint this message\n";
-  std::cout << "\t-n INT\t\tGraph size, default 1024\n";
-  std::cout << "\t-p DOUBLE\t\tProbability of edge from a given node to another (0.0 to 1.0), default 0.5\n";
-  std::cout << "\t-a CHAR\t\tAlgorithm to use for all pairs shortest path\n";
-  std::cout << "\t\t\t\tf: Floyd-Warshall (default)\n";
-  std::cout << "\t\t\t\tj: Johnson's Algorithm\n";
-  std::cout << "\t-s LONG\t\tSeed for graph generation\n";
-  std::cout << "\t-b INT\t\tNumber of times to run the benchmark, default 1\n";
-  std::cout << "\t-c\t\tCheck correctness\n";
-  std::cout << "\n";
-}
+void bench_floyd_warshall(double p, unsigned long seed, int block_size, bool check_correctness) {
+  std::cout << "Benchmarking Results for p=" << p << ", block size=" << block_size << " and seed=" << seed << "\n";
 
-std::string get_solution_filename(std::string prefix, int n, double p, unsigned long seed) {
-  std::stringstream solution_filename;
-  solution_filename << "solution_cache/" << prefix << "-sol-n"<< n << "-p" << p << "-s" << seed << ".bin";
-  return solution_filename.str();
+  if (check_correctness) {
+    std::printf("\n --------------------------------------------------------------- \n");
+  } else {
+    std::printf("\n ---------------------------------------------------- \n");
+  }
+
+  std::printf("| %-7s | %-12s | %-12s | %-10s |", "verts", "seq (ms)", "par (ms)", "speedup");
+  if (check_correctness) {
+    std::printf(" %-8s |", "correct");
+    std::printf("\n --------------------------------------------------------------- \n");
+  } else {
+    std::printf("\n ---------------------------------------------------- \n");
+  }
+
+  for (int v = 64; v <= 4096; v *= 2) {
+    int* matrix = floyd_warshall_init(v, p, seed);
+    int* solution = new int[v * v];
+    int* output = new int[v * v];
+
+    bool correct = false;
+
+    double seq_total_time = 0.0;
+    double total_time = 0.0;
+    for (int b = 0; b < 1; b++) {
+      // clear solution
+      std::memset(solution, 0, sizeof(int));
+
+      auto seq_start = std::chrono::high_resolution_clock::now();
+      floyd_warshall(matrix, solution, v);
+      auto seq_end = std::chrono::high_resolution_clock::now();
+
+      std::chrono::duration<double, std::milli> seq_start_to_end = seq_end - seq_start;
+      seq_total_time += seq_start_to_end.count();
+
+      // clear output
+      std::memset(output, 0, sizeof(int));
+      auto start = std::chrono::high_resolution_clock::now();
+      floyd_warshall_blocked(matrix, output, v, block_size);
+      auto end = std::chrono::high_resolution_clock::now();
+
+      if (check_correctness) {
+        correct = correct || correctness_check(output, solution, v);
+      }
+
+      std::chrono::duration<double, std::milli> start_to_end = end - start;
+      total_time += start_to_end.count();
+    }
+    delete[] matrix;
+
+    if (check_correctness) {
+      std::printf("| %-7d | %-12.3f | %-12.3f | %-10.3f | %-8s |\n", v, seq_total_time / 2, total_time / 2, seq_total_time / total_time, (correct ? "x" : "!"));
+    } else {
+      std::printf("| %-7d | %-12.3f | %-12.3f | %-10.3f |\n", v, seq_total_time / 2, total_time / 2, seq_total_time / total_time);
+    }
+  }
+  if (check_correctness) {
+    std::printf("\n -------------------------------------------------------------- \n");
+  } else {
+    std::printf("\n ---------------------------------------------------- \n");
+  }
 }

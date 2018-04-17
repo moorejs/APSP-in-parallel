@@ -31,8 +31,8 @@ inline void floyd_warshall(const int* input, int* output, const int n) {
   std::memcpy(output, input, n * n * sizeof(int));
 
   for (int k = 0; k < n; k++) {
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < n; j++) {
+    for (int j = 0; j < n; j++) {
+      for (int i = 0; i < n; i++) {
         if (output[i*n + j] > output[i*n + k] + output[k*n + j]) {
           output[i*n + j] = output[i*n + k] + output[k*n + j];
         }
