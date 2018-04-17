@@ -1,10 +1,18 @@
 #include <random> // mt19937_64, uniform_x_distribution
+#include <boost/config.hpp>
 #include <vector>
-#include <bits/stdc++.h>
-#include <boost/heap/fibonacci_heap.hpp>
+#include <boost/graph/adjacency_list.hpp>
+#include <boost/graph/johnson_all_pairs_shortest.hpp>
 
-using namespace std;
+//using namespace std;
+using namespace boost;
 
+typedef adjacency_list<listS, vecS, directedS,
+                                 no_property, property<edge_weight_t, int> > Graph;
+typedef graph_traits<Graph>::vertex_descriptor Vertex;
+typedef std::pair<int,int> Edge;
+
+/*
 typedef struct node {
   int weight;
   int u;
@@ -21,7 +29,7 @@ typedef struct compare_node {
 typedef struct Graph {
   int V;
   std::vector< tuple <int, int> >* edge_list;
-} Graph_t;
+} Graph_t; */
 
 
 inline int* johnson_init(const int n, const int p, const unsigned long seed) {
@@ -47,6 +55,7 @@ inline int* johnson_init(const int n, const int p, const unsigned long seed) {
   return adj_matrix;
 }
 
+/*
 inline Graph_t *johnson_init2(const int n, const int p, const unsigned long seed) {
   static std::uniform_real_distribution<double> flip(0, 1);
   static std::uniform_int_distribution<int> choose_weight(0, 100);
@@ -79,6 +88,57 @@ inline Graph_t *johnson_init2(const int n, const int p, const unsigned long seed
   }
   delete[] adj_matrix;
   return graph;
+} */
+
+typedef struct graph {
+  int V;
+  int E;
+  Edge *edge_array;
+  int *weights;
+} graph_t;
+
+inline graph_t *johnson_init3(const int n, const int p, const unsigned long seed) {
+  static std::uniform_real_distribution<double> flip(0, 1);
+  static std::uniform_int_distribution<int> choose_weight(1, 100);
+
+  std::mt19937_64 rand_engine(seed);
+
+  int *adj_matrix = new int[n * n];
+  size_t E = 0;
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      if (i == j) {
+        adj_matrix[i*n + j] = 0;
+      } else if (flip(rand_engine) > p) {
+        adj_matrix[i*n + j] = choose_weight(rand_engine);
+        E ++;
+      } else {
+        adj_matrix[i*n + j] = INT_MAX;
+      }
+    }
+  }
+  Edge *edge_array = new Edge[E];
+  int *weights = new int[E];
+  int ei = 0;
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      if (adj_matrix[i*n + j] != 0 && adj_matrix[i*n + j] != INT_MAX) {
+        edge_array[ei] = Edge(i,j);
+        weights[ei] = adj_matrix[i*n + j];
+        ei++;
+      }
+    }
+  }
+
+  delete[] adj_matrix;
+
+  graph_t *gr = new graph_t;
+  gr->V = n;
+  gr->E = E;
+  gr->edge_array = edge_array;
+  gr->weights = weights;
+
+  return gr;
 }
 
 /*
@@ -113,7 +173,7 @@ inline bool bellman_ford(Graph *input, int *dist, int src) {
   return true;
 }
 */
-
+/*
 inline int min_distance(int dist[], bool sptSet[], int n) {
   int min = INT_MAX;
   int min_index = 0;
@@ -138,17 +198,18 @@ inline void dijkstra(int *input, int *dist, int src, int n) {
   dist[src] = 0;
   for (int count = 0; count < n-1; count++) {
     int u = min_distance(dist, sptSet, n);
+    int u_row = u * n;
     sptSet[u] = true;
-
     for (int v = 0; v < n; v++) {
-      if (!sptSet[v] && input[u*n + v] && dist[u] != INT_MAX
-                     && dist[u]+input[u*n + v] < dist[v]) {
-        dist[v] = dist[u] + input[u*n + v];
+      if (!sptSet[v] && input[u_row + v] && dist[u] != INT_MAX
+                     && dist[u]+input[u_row + v] < dist[v]) {
+        dist[v] = dist[u] + input[u_row + v];
       }
 
     }
   }
 }
+
 
 inline void dijkstra2(Graph_t *input, int *dist, int src) {
   int n = input->V;
@@ -192,4 +253,4 @@ inline void johnson2(Graph_t *input, int *output, int n) {
   for (int s = 0; s < n; s++) {
     dijkstra2(input, &output[s*n], s);
   }
-}
+} */

@@ -56,7 +56,7 @@ int main(int argc, char* argv[]) {
       case 'n':
         n = std::stoi(optarg);
         break;
-        
+
       case 'd':
         block_size = std::stoi(optarg);
         break;
@@ -137,23 +137,37 @@ int main(int argc, char* argv[]) {
 
   } else {  // Using Johnson's Algorithm
     std::cout << "Solving APSP with Johnson's sequentially" << "\n";
-    int *matrix_john = johnson_init(n, p, seed);
+    //int *matrix_john = johnson_init(n, p, seed);
     //Graph_t *graph_john = johnson_init2(n, p, seed);
-    int *output = new int[n * n];
+    graph_t *gr = johnson_init3(n, p, seed);
+    int **out = new int*[n];
+    for (int i = 0; i < n; i++) out[i] = new int[n];
+
+    Graph G(gr->edge_array, gr->edge_array + gr->E, gr->weights, gr->V);
+    std::vector<int> d(num_vertices(G));
 
     double total_time = 0.0;
     for (int b = 0; b < bench_count; b++) {
       auto start = std::chrono::high_resolution_clock::now();
-      johnson(matrix_john, output, n);
+      //johnson(matrix_john, output, n);
       //johnson2(graph_john, output, n);
+      std::vector<int> d(num_vertices(G));
+      johnson_all_pairs_shortest_paths(G, out, distance_map(&d[0]));
       auto end = std::chrono::high_resolution_clock::now();
       std::chrono::duration<double, std::milli> start_to_end = end - start;
       total_time += start_to_end.count();
     }
     std::cout << "Algorithm runtime: " << total_time / bench_count << "ms\n\n";
 
+    int *output = new int[n * n];
+    for (int i = 0; i < n; i++) {
+      std::memcpy(&output[i*n], out[i], n * sizeof(int));
+    }
+
     if (check_correctness) correctness_check(output, solution, n);
-    delete[] matrix_john;
+
+    for (int i = 0; i < n; i++) delete[] out[i];
+    delete[] out;
     delete[] output;
   }
 
