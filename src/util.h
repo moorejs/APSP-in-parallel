@@ -8,8 +8,8 @@ bool correctness_check(int* output, int n_output, int* solution, int n_solution)
   for (int i = 0; i < n_solution; i++) {
     for (int j = 0; j < n_solution; j++) {
       if (output[i*n_output + j] != solution[i*n_solution + j]) {
-        std::cerr << "Output did not match at [" << i << "][" << j << "]: " << output[i*n_output+j]
-                << " vs solution's " << solution[i*n_solution+j] << "!\n";
+        std::cerr << "\nOutput did not match at [" << i << "][" << j << "]: " << output[i*n_output+j]
+		  << " vs solution's " << solution[i*n_solution+j] << "!" << std::endl;
         return false;
       }
     }

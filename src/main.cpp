@@ -74,13 +74,13 @@ int main(int argc, char* argv[]) {
     bool write_solution_to_file = true;
 
     // have we cached the solution before?
-    std::string solution_filename = get_solution_filename("fw", n, p, seed);
+    std::string solution_filename = get_solution_filename("apsp", n, p, seed);
     struct stat file_stat;
     bool solution_available = stat(solution_filename.c_str(), &file_stat) != -1 || errno != ENOENT;
 
     solution = new int[n * n];
     if (solution_available) {
-      std::cout << "Reading reference solution from file\n";
+      std::cout << "Reading reference solution from file: " << solution_filename << "\n";
 
       std::ifstream in(solution_filename, std::ios::in | std::ios::binary);
       in.read(reinterpret_cast<char*>(solution), n * n * sizeof(int));
@@ -97,7 +97,7 @@ int main(int argc, char* argv[]) {
       std::cout << "Algorithm runtime: " << start_to_end.count() << "ms\n";
 
       if (write_solution_to_file) {
-        std::cout << "Writing solution to file\n";
+        std::cout << "Writing solution to file: " << solution_filename << "\n";
 
         if (system("mkdir -p solution_cache") == -1) {
           std::cerr << "mkdir failed!";
@@ -118,21 +118,23 @@ int main(int argc, char* argv[]) {
       bench_floyd_warshall(1, seed, block_size, check_correctness);
     } else {
       matrix = floyd_warshall_blocked_init(n, block_size, p, seed);
-      output = new int[n * n];
+      int n_blocked = n;
+      int block_remainder = n % block_size;
+      if (block_remainder != 0) {
+	n_blocked = n + block_size - block_remainder;
+      }
 
-      std::cout << "Using Floyd-Warshall's on " << n << "x" << n << " with p=" << p << " and seed=" << seed;
+      output = new int[n_blocked * n_blocked];
+
+      std::cout << "Using Floyd-Warshall's on " << n_blocked << "x" << n_blocked 
+		<< " with p=" << p << " and seed=" << seed << "\n";
       auto start = std::chrono::high_resolution_clock::now();
-      floyd_warshall_blocked(matrix, output, n, block_size);
+      floyd_warshall_blocked(matrix, output, n_blocked, block_size);
       auto end = std::chrono::high_resolution_clock::now();
       std::chrono::duration<double, std::milli> start_to_end = end - start;
       std::cout << "Algorithm runtime: " << start_to_end.count() << "ms\n\n";
 
       if (check_correctness) {
-        int n_blocked = n;
-        int block_remainder = n % block_size;
-        if (block_remainder != 0) {
-          n_blocked = n + block_size - block_remainder;
-        }
         correctness_check(output, n_blocked, solution, n);
       }
 
@@ -182,20 +184,20 @@ void bench_floyd_warshall(int iterations, unsigned long seed, int block_size, bo
   std::cout << "\n\nFloyd-Warshall's Algorithm benchmarking results for seed=" << seed << " and block size=" << block_size << "\n";
 
   print_table_header(check_correctness);
-	for (double p = 0.25; p < 1.0; p += 0.25) {
+  for (double p = 0.25; p < 1.0; p += 0.25) {
     for (int v = 64; v <= 1024; v *= 2) {
       int* matrix = floyd_warshall_init(v, p, seed);
       int* solution = new int[v * v];
-      int* output = new int[v * v];
 
-      int* matrix_blocked = matrix;
+      int* matrix_blocked = matrix; // try to reuse inputs
       int v_blocked = v;
       int block_remainder = v % block_size;
-      // we may have to add some verts to fit to a multiple of block_size
-      if (block_remainder != 0) {
+      if (block_remainder != 0) {  
+	// we may have to add some verts to fit to a multiple of block_size
         matrix_blocked = floyd_warshall_blocked_init(v, block_size, p, seed);
-        v_blocked = v + block_size - block_remainder;
+	v_blocked = v + block_size - block_remainder;
       }
+      int* output = new int[v_blocked * v_blocked];
 
       bool correct = false;
 
@@ -227,10 +229,11 @@ void bench_floyd_warshall(int iterations, unsigned long seed, int block_size, bo
       }
       delete[] matrix;
 
-			print_table_row(p, v, seq_total_time, total_time, check_correctness, correct);
-		}
+      print_table_row(p, v, seq_total_time, total_time, check_correctness, correct);
+    }
     print_table_break(check_correctness);
   }
+  std::cout << "\n\n";
 }
 
 void bench_johnson(int iterations, unsigned long seed, bool check_correctness) {
@@ -238,7 +241,7 @@ void bench_johnson(int iterations, unsigned long seed, bool check_correctness) {
 
   print_table_header(check_correctness);
 
-	for (double p = 0.25; p < 1.0; p += 0.25) {
+  for (double p = 0.25; p < 1.0; p += 0.25) {
     for (int v = 64; v <= 1024; v *= 2) {
       // TODO: johnson init
       graph_t* gr = johnson_init3(v, p, seed);
@@ -286,8 +289,9 @@ void bench_johnson(int iterations, unsigned long seed, bool check_correctness) {
       delete[] output;
       delete[] matrix;
 
-			print_table_row(p, v, seq_total_time, total_time, check_correctness, correct);
-		}
+      print_table_row(p, v, seq_total_time, total_time, check_correctness, correct);
+    }
     print_table_break(check_correctness);
   }
+  std::cout << "\n\n";
 }
