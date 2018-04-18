@@ -1,9 +1,8 @@
 #include <cstring> // memcpy
 #include <random>		 // mt19937_64, uniform_x_distribution
-#include <climits>
 
 // we need this to initialized to 0 on the diagonal, infinity anywhere there is no edge
-inline int* floyd_warshall_init(const int n, const int p, const unsigned long seed) {
+inline int* floyd_warshall_init(const int n, const double p, const unsigned long seed) {
   static std::uniform_real_distribution<double> flip(0, 1);
   // TODO: create negative edges without negative cycles
   static std::uniform_int_distribution<int> choose_weight(1, 100);
@@ -18,7 +17,42 @@ inline int* floyd_warshall_init(const int n, const int p, const unsigned long se
       } else if (flip(rand_engine) > p) {
         out[i*n + j] = choose_weight(rand_engine);
       } else {
-        out[i*n + j] = INT_MAX; // infinity
+        // "infinity" - the highest value we can still safely add two infinities
+        out[i*n + j] = std::numeric_limits<int>::max() / 2;
+      }
+    }
+  }
+
+  return out;
+}
+
+// we need this to initialized to 0 on the diagonal, infinity anywhere there is no edge
+// we also need to limit the width and height but keep it a multiple of block_size
+inline int* floyd_warshall_blocked_init(const int n, const int block_size, const double p, const unsigned long seed) {
+  static std::uniform_real_distribution<double> flip(0, 1);
+  // TODO: create negative edges without negative cycles
+  static std::uniform_int_distribution<int> choose_weight(1, 100);
+
+  std::mt19937_64 rand_engine(seed);
+
+  int n_oversized;
+  int block_remainder = n % block_size;
+  if (block_remainder == 0) {
+    n_oversized = n;
+  } else {
+    n_oversized = n + block_size - block_remainder;
+  }
+
+  int* out = new int[n_oversized * n_oversized];
+  for (int i = 0; i < n_oversized; i++) {
+    for (int j = 0; j < n_oversized; j++) {
+      if (i == j) {
+        out[i*n_oversized + j] = 0;
+      } else if (i < n && j < n && flip(rand_engine) > p) {
+        out[i*n_oversized + j] = choose_weight(rand_engine);
+      } else {
+        // "infinity" - the highest value we can still safely add two infinities
+        out[i*n_oversized + j] = std::numeric_limits<int>::max() / 2;
       }
     }
   }

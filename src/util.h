@@ -1,15 +1,15 @@
 #include <iostream> // cout
 #include <string> // string
-#include <sstream>	// stringstream;
+#include <sstream>	// stringstream
 
 // Util functions
 
-bool correctness_check(int *output, int *solution, int n) {
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j < n; j++) {
-      if (output[i*n + j] != solution[i*n + j]) {
-        std::cerr << "Output did not match at [" << i << "][" << j << "]: " << output[i*n+j]
-                << " vs solution's " << solution[i*n+j] << "!\n";
+bool correctness_check(int* output, int n_output, int* solution, int n_solution) {
+  for (int i = 0; i < n_solution; i++) {
+    for (int j = 0; j < n_solution; j++) {
+      if (output[i*n_output + j] != solution[i*n_solution + j]) {
+        std::cerr << "Output did not match at [" << i << "][" << j << "]: " << output[i*n_output+j]
+                << " vs solution's " << solution[i*n_solution+j] << "!\n";
         return false;
       }
     }
@@ -30,6 +30,31 @@ void print_usage() {
   std::cout << "\t-b INT\t\tNumber of times to run the benchmark, default 1\n";
   std::cout << "\t-c\t\tCheck correctness\n";
   std::cout << "\n";
+}
+
+void print_table_row(double p, int v, double seq, double par, bool check_correctness, bool correct) {
+  std::printf("\n| %-3.2f | %-7d | %-12.3f | %-12.3f | %-10.3f |", p, v, seq, par, seq /par);
+  if (check_correctness) {
+    std::printf(" %-8s |", (correct ? "x" : "!"));
+  }
+}
+
+void print_table_break(bool check_correctness) {
+  if (check_correctness) {
+    std::printf("\n ----------------------------------------------------------------------");
+  } else {
+    std::printf("\n -----------------------------------------------------------");
+  }
+}
+
+void print_table_header(bool check_correctness) {
+  print_table_break(check_correctness);
+  std::printf("\n| %-4s | %-7s | %-12s | %-12s | %-10s |",
+      "p", "verts", "seq (ms)", "par (ms)", "speedup");
+  if (check_correctness) {
+    std::printf(" %-8s |", "correct");
+  }
+  print_table_break(check_correctness);
 }
 
 std::string get_solution_filename(std::string prefix, int n, double p, unsigned long seed) {
