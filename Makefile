@@ -3,13 +3,14 @@ OUTPUT = apsp
 
 SRC_DIR = src
 SRC_EXT = cpp
-INCLUDE = -I$(SRC_PATH)
+INCLUDE = -I$(SRC_DIR)
 
 COMPILE_FLAGS = -std=c++11 -Wall -Wextra -g
+
 RCOMPILE_FLAGS = -D NDEBUG
 DCOMPILE_FLAGS = -D DEBUG
 
-LINK_FLAGS = 
+LINK_FLAGS =
 
 SOURCES := $(shell find $(SRC_DIR) -name '*$(SRC_EXT)')
 OBJECTS = $(SOURCES:$(SRC_DIR)/%.$(SRC_EXT)=%.o)
@@ -26,7 +27,7 @@ seq: export TYPE := seq
 
 omp: export TYPE := omp
 omp: export CXXFLAGS += -fopenmp
-omp: export LD_FLAGS += -fopenmp
+omp: export LDFLAGS += -fopenmp
 
 release debug: seq omp
 
@@ -44,11 +45,11 @@ all: bin/$(VERSION)/$(OUTPUT)
 
 # linking
 bin/$(VERSION)/$(OUTPUT): $(addprefix build-$(TYPE)/, $(OBJECTS))
-	$(CXX) $^ -o $@-$(TYPE)
+	$(CXX) $^ $(LDFLAGS) -o $@-$(TYPE)
 
 # compiling
 build-$(TYPE)/%.o: $(SRC_DIR)/%.$(SRC_EXT)
-	$(CXX) $(COMPILE_FLAGS) $(INCLUDE) -MP -MMD -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(INCLUDE) -MP -MMD -c $< -o $@
 
 clean:
 	$(RM) $(OUTPUT)-seq
@@ -59,3 +60,4 @@ clean:
 
 	$(RM) -r bin
 	$(RM) -r solution_cache
+
