@@ -97,7 +97,7 @@ typedef struct graph {
   int *weights;
 } graph_t;
 
-inline graph_t *johnson_init3(const int n, const int p, const unsigned long seed) {
+inline graph_t *johnson_init3(const int n, const double p, const unsigned long seed) {
   static std::uniform_real_distribution<double> flip(0, 1);
   static std::uniform_int_distribution<int> choose_weight(1, 100);
 
@@ -122,7 +122,8 @@ inline graph_t *johnson_init3(const int n, const int p, const unsigned long seed
   int ei = 0;
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < n; j++) {
-      if (adj_matrix[i*n + j] != 0 && adj_matrix[i*n + j] != INT_MAX) {
+      if (adj_matrix[i*n + j] != 0
+          && adj_matrix[i*n + j] != INT_MAX) {
         edge_array[ei] = Edge(i,j);
         weights[ei] = adj_matrix[i*n + j];
         ei++;

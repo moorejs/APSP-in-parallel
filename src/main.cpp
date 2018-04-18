@@ -241,9 +241,15 @@ void bench_johnson(int iterations, unsigned long seed, bool check_correctness) {
 	for (double p = 0.25; p < 1.0; p += 0.25) {
     for (int v = 64; v <= 1024; v *= 2) {
       // TODO: johnson init
-      int* matrix = nullptr;
-      int* solution = nullptr;
-      int* output = nullptr;
+      graph_t* gr = johnson_init3(v, p, seed);
+      int* matrix = floyd_warshall_init(v, p, seed);
+      int* output = new int[v*v];
+
+      int* solution = new int[v*v];
+      int** out_sol = new int*[v];
+      for (int i = 0; i < v; i++) out_sol[i] = &solution[i*v];
+      Graph G(gr->edge_array, gr->edge_array + gr->E, gr->weights, gr->V);
+      std::vector<int> d(num_vertices(G));
 
       bool correct = false;
 
@@ -255,6 +261,7 @@ void bench_johnson(int iterations, unsigned long seed, bool check_correctness) {
 
         auto seq_start = std::chrono::high_resolution_clock::now();
         // TODO: johnson sequental
+        johnson_all_pairs_shortest_paths(G, out_sol, distance_map(&d[0]));
         auto seq_end = std::chrono::high_resolution_clock::now();
 
         std::chrono::duration<double, std::milli> seq_start_to_end = seq_end - seq_start;
@@ -264,6 +271,7 @@ void bench_johnson(int iterations, unsigned long seed, bool check_correctness) {
         std::memset(output, 0, sizeof(int));
         auto start = std::chrono::high_resolution_clock::now();
         // TODO: johnson parallel
+        floyd_warshall(matrix, output, v);
         auto end = std::chrono::high_resolution_clock::now();
 
         if (check_correctness) {
@@ -273,6 +281,9 @@ void bench_johnson(int iterations, unsigned long seed, bool check_correctness) {
         std::chrono::duration<double, std::milli> start_to_end = end - start;
         total_time += start_to_end.count();
       }
+      delete[] solution;
+      delete[] out_sol;
+      delete[] output;
       delete[] matrix;
 
 			print_table_row(p, v, seq_total_time, total_time, check_correctness, correct);
