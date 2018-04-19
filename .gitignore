@@ -1,7 +1,9 @@
 bin/*
-build/*
+build-seq/*
+build-omp/*
 
 .vscode/*
 
 solution_cache/*
-apsp
+apsp-seq
+apsp-omp

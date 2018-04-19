@@ -7,6 +7,10 @@
 #include <sstream> // stringstream
 #include <ratio>  // milli
 
+#ifdef _OPENMP
+#include "omp.h" // omp_set_num_threads
+#endif
+
 #include "util.h"
 #include "johnson.h"
 #include "floyd_warshall.h"
@@ -23,10 +27,11 @@ int main(int argc, char* argv[]) {
   bool benchmark = false;
   bool check_correctness = false;
   int block_size = 32;
+  int thread_count = 1;
 
   extern char* optarg;
   int opt;
-  while ((opt = getopt(argc, argv, "ha:n:p:s:bd:c")) != -1) {
+  while ((opt = getopt(argc, argv, "ha:n:p:s:bd:ct:")) != -1) {
     switch (opt) {
       case 'h':
       case '?': // illegal command
@@ -66,8 +71,19 @@ int main(int argc, char* argv[]) {
       case 'c':
         check_correctness = true;
         break;
+	
+      case 't':
+	thread_count = std::stoi(optarg);
+        break;
+
     }
   }
+
+#ifdef _OPENMP
+  omp_set_num_threads(thread_count);
+#else
+  (void)thread_count; // suppress unused warning
+#endif
 
   int* solution = nullptr; // both algorithms share the same solution
   if (!benchmark && check_correctness) {
