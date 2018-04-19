@@ -126,7 +126,7 @@ int main(int argc, char* argv[]) {
 
       output = new int[n_blocked * n_blocked];
 
-      std::cout << "Using Floyd-Warshall's on " << n_blocked << "x" << n_blocked 
+      std::cout << "Using Floyd-Warshall's on " << n_blocked << "x" << n_blocked
 		<< " with p=" << p << " and seed=" << seed << "\n";
       auto start = std::chrono::high_resolution_clock::now();
       floyd_warshall_blocked(matrix, output, n_blocked, block_size);
@@ -145,12 +145,12 @@ int main(int argc, char* argv[]) {
     if (benchmark) {
       bench_johnson(1, seed, check_correctness);
     } else {
-      //int *matrix_john = johnson_init(n, p, seed);
-      //Graph_t *graph_john = johnson_init2(n, p, seed);
-      graph_t *gr = johnson_init3(n, p, seed);
+      graph_t *gr = johnson_init(n, p, seed);
       int **out = new int*[n];
-      for (int i = 0; i < n; i++) out[i] = new int[n];
-
+      int *output = new int[n * n];
+      for (int i = 0; i < n; i++) out[i] = &output[i*n];
+      std::cout << "Using Johnson's on " << n << "x" << n
+                << " with p=" << p << " and seed=" << seed << "\n";
       Graph G(gr->edge_array, gr->edge_array + gr->E, gr->weights, gr->V);
       std::vector<int> d(num_vertices(G));
 
@@ -160,14 +160,8 @@ int main(int argc, char* argv[]) {
       std::chrono::duration<double, std::milli> start_to_end = end - start;
       std::cout << "Algorithm runtime: " << start_to_end.count() << "ms\n\n";
 
-      int *output = new int[n * n];
-      for (int i = 0; i < n; i++) {
-        std::memcpy(&output[i*n], out[i], n * sizeof(int));
-      }
-
       if (check_correctness) correctness_check(output, n, solution, n);
 
-      for (int i = 0; i < n; i++) delete[] out[i];
       delete[] out;
       delete[] output;
     }
@@ -192,10 +186,10 @@ void bench_floyd_warshall(int iterations, unsigned long seed, int block_size, bo
       int* matrix_blocked = matrix; // try to reuse inputs
       int v_blocked = v;
       int block_remainder = v % block_size;
-      if (block_remainder != 0) {  
+      if (block_remainder != 0) {
 	// we may have to add some verts to fit to a multiple of block_size
         matrix_blocked = floyd_warshall_blocked_init(v, block_size, p, seed);
-	v_blocked = v + block_size - block_remainder;
+	    v_blocked = v + block_size - block_remainder;
       }
       int* output = new int[v_blocked * v_blocked];
 
@@ -205,7 +199,7 @@ void bench_floyd_warshall(int iterations, unsigned long seed, int block_size, bo
       double total_time = 0.0;
       for (int b = 0; b < iterations; b++) {
         // clear solution
-        std::memset(solution, 0, sizeof(int));
+        std::memset(solution, 0, v*v*sizeof(int));
 
         auto seq_start = std::chrono::high_resolution_clock::now();
         floyd_warshall(matrix, solution, v);
@@ -215,7 +209,7 @@ void bench_floyd_warshall(int iterations, unsigned long seed, int block_size, bo
         seq_total_time += seq_start_to_end.count();
 
         // clear output
-        std::memset(output, 0, sizeof(int));
+        std::memset(output, 0, v_blocked*v_blocked*sizeof(int));
         auto start = std::chrono::high_resolution_clock::now();
         floyd_warshall_blocked(matrix_blocked, output, v_blocked, block_size);
         auto end = std::chrono::high_resolution_clock::now();
@@ -240,13 +234,14 @@ void bench_johnson(int iterations, unsigned long seed, bool check_correctness) {
   std::cout << "\n\nJohnson's Algorithm benchmarking results for seed=" << seed << "\n";
 
   print_table_header(check_correctness);
-
+  int block_size = 32; // Remove when parallel johnson comes into being
   for (double p = 0.25; p < 1.0; p += 0.25) {
-    for (int v = 64; v <= 1024; v *= 2) {
-      // TODO: johnson init
-      graph_t* gr = johnson_init3(v, p, seed);
+    for (int v = 64; v <= 2048; v *= 2) {
+      // johnson init
+      graph_t* gr = johnson_init(v, p, seed);
       int* matrix = floyd_warshall_init(v, p, seed);
-      int* output = new int[v*v];
+      int v_blocked = v + block_size - v % block_size;
+      int* output = new int[v* v];
 
       int* solution = new int[v*v];
       int** out_sol = new int*[v];
@@ -260,10 +255,9 @@ void bench_johnson(int iterations, unsigned long seed, bool check_correctness) {
       double total_time = 0.0;
       for (int b = 0; b < iterations; b++) {
         // clear solution
-        std::memset(solution, 0, sizeof(int));
+        std::memset(solution, 0, v*v*sizeof(int));
 
         auto seq_start = std::chrono::high_resolution_clock::now();
-        // TODO: johnson sequental
         johnson_all_pairs_shortest_paths(G, out_sol, distance_map(&d[0]));
         auto seq_end = std::chrono::high_resolution_clock::now();
 
@@ -271,10 +265,10 @@ void bench_johnson(int iterations, unsigned long seed, bool check_correctness) {
         seq_total_time += seq_start_to_end.count();
 
         // clear output
-        std::memset(output, 0, sizeof(int));
+        std::memset(output, 0, v*v*sizeof(int));
         auto start = std::chrono::high_resolution_clock::now();
-        // TODO: johnson parallel
-        floyd_warshall(matrix, output, v);
+        // TODO: johnson parallel -- temporarily putting floyd_warshall here
+        floyd_warshall_blocked(matrix, output, v, block_size);
         auto end = std::chrono::high_resolution_clock::now();
 
         if (check_correctness) {
