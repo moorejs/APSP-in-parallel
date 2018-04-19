@@ -71,7 +71,7 @@ int main(int argc, char* argv[]) {
       case 'c':
         check_correctness = true;
         break;
-	
+
       case 't':
 	thread_count = std::stoi(optarg);
         break;
@@ -256,7 +256,6 @@ void bench_johnson(int iterations, unsigned long seed, bool check_correctness) {
       // johnson init
       graph_t* gr = johnson_init(v, p, seed);
       int* matrix = floyd_warshall_init(v, p, seed);
-      int v_blocked = v + block_size - v % block_size;
       int* output = new int[v* v];
 
       int* solution = new int[v*v];
