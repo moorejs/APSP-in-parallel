@@ -284,9 +284,7 @@ void bench_johnson(int iterations, unsigned long seed, bool check_correctness) {
         auto start = std::chrono::high_resolution_clock::now();
         // TODO: johnson parallel -- temporarily putting floyd_warshall here
         //floyd_warshall_blocked(matrix, output, v, block_size);
-        std::cerr << "Starting parallel Johnson\n";
         johnson_parallel(gr, output);
-        std::cerr << "Parallel Johnson success\n";
         auto end = std::chrono::high_resolution_clock::now();
 
         if (check_correctness) {
