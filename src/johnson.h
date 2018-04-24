@@ -1,3 +1,5 @@
+#pragma once
+
 #include <random> // mt19937_64, uniform_x_distribution
 #include <boost/config.hpp>
 #include <vector>
