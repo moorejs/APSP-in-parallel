@@ -1,63 +1,18 @@
-CXX = g++
-OUTPUT = apsp
+# Override using CXX=clang++ make ...
+CXX ?= g++
+CXXFLAGS ?= -std=c++11 -Wall -Wextra -g -O3
+LDFLAGS ?=
 
-SRC_DIR = src
-SRC_EXT = cpp
-INCLUDE = -I$(SRC_DIR)
+SOURCES := $(shell find src -name '*cpp')
 
-COMPILE_FLAGS = -std=c++11 -Wall -Wextra -g
+omp: LDFLAGS += -fopenmp
 
-RCOMPILE_FLAGS = -D NDEBUG
-DCOMPILE_FLAGS = -D DEBUG
+all: seq omp
 
-LINK_FLAGS =
-
-SOURCES := $(shell find $(SRC_DIR) -name '*$(SRC_EXT)')
-OBJECTS = $(SOURCES:$(SRC_DIR)/%.$(SRC_EXT)=%.o)
-
-release: export VERSION := release
-release: export CXXFLAGS := $(CXXFLAGS) $(COMPILE_FLAGS) $(RCOMPILE_FLAGS)
-release: export LDFLAGS := $(LDFLAGS) $(LINK_FLAGS)
-
-debug: export VERSION := debug
-debug: export CXXFLAGS := $(CXXFLAGS) $(COMPILE_FLAGS) $(DCOMPILE_FLAGS)
-debug: export LDFLAGS := $(LDFLAGS) $(LINK_FLAGS)
-
-seq: export TYPE := seq
-
-omp: export TYPE := omp
-omp: export CXXFLAGS += -fopenmp
-omp: export LDFLAGS += -fopenmp
-
-release debug: seq omp
-
-seq omp:
-	@mkdir -p build-seq
-	@mkdir -p build-omp
-	@mkdir -p bin/$(VERSION)
-	$(MAKE) all --no-print-directory
-
-all: bin/$(VERSION)/$(OUTPUT)
-	@$(RM) $(OUTPUT)-seq
-	@$(RM) $(OUTPUT)-omp
-	@ln -s $<-seq $(OUTPUT)-seq
-	@ln -s $<-omp $(OUTPUT)-omp
-
-# linking
-bin/$(VERSION)/$(OUTPUT): $(addprefix build-$(TYPE)/, $(OBJECTS))
-	$(CXX) $^ $(LDFLAGS) -o $@-$(TYPE)
-
-# compiling
-build-$(TYPE)/%.o: $(SRC_DIR)/%.$(SRC_EXT)
-	$(CXX) $(CXXFLAGS) $(INCLUDE) -MP -MMD -c $< -o $@
+seq omp: $(SOURCES)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) $< -o apsp-$@
 
 clean:
-	$(RM) $(OUTPUT)-seq
-	$(RM) $(OUTPUT)-openmp
-
-	$(RM) -r build-seq
-	$(RM) -r build-omp
-
-	$(RM) -r bin
+	$(RM) apsp-seq
+	$(RM) apsp-omp
 	$(RM) -r solution_cache
-

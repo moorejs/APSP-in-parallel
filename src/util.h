@@ -1,8 +1,8 @@
+#pragma once
+
 #include <iostream> // cout
 #include <string> // string
-#include <sstream>	// stringstream
-
-// Util functions
+#include <sstream> // stringstream
 
 bool correctness_check(int* output, int n_output, int* solution, int n_solution) {
   for (int i = 0; i < n_solution; i++) {

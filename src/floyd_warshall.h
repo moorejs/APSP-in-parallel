@@ -1,5 +1,7 @@
+#pragma once
+
 #include <cstring> // memcpy
-#include <random>		 // mt19937_64, uniform_x_distribution
+#include <random> // mt19937_64, uniform_x_distribution
 
 // we need this to initialized to 0 on the diagonal, infinity anywhere there is no edge
 inline int* floyd_warshall_init(const int n, const double p, const unsigned long seed) {
