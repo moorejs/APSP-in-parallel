@@ -162,23 +162,24 @@ int main(int argc, char* argv[]) {
       bench_johnson(1, seed, check_correctness);
     } else {
       graph_t *gr = johnson_init(n, p, seed);
-      int **out = new int*[n];
+      //int **out = new int*[n];
       int *output = new int[n * n];
-      for (int i = 0; i < n; i++) out[i] = &output[i*n];
+      //for (int i = 0; i < n; i++) out[i] = &output[i*n];
       std::cout << "Using Johnson's on " << n << "x" << n
                 << " with p=" << p << " and seed=" << seed << "\n";
-      Graph G(gr->edge_array, gr->edge_array + gr->E, gr->weights, gr->V);
-      std::vector<int> d(num_vertices(G));
+      //Graph G(gr->edge_array, gr->edge_array + gr->E, gr->weights, gr->V);
+      //std::vector<int> d(num_vertices(G));
 
       auto start = std::chrono::high_resolution_clock::now();
-      johnson_all_pairs_shortest_paths(G, out, distance_map(&d[0]));
+      //johnson_all_pairs_shortest_paths(G, out, distance_map(&d[0]));
+      johnson_parallel(gr, output);
       auto end = std::chrono::high_resolution_clock::now();
       std::chrono::duration<double, std::milli> start_to_end = end - start;
       std::cout << "Algorithm runtime: " << start_to_end.count() << "ms\n\n";
 
       if (check_correctness) correctness_check(output, n, solution, n);
 
-      delete[] out;
+      //delete[] out;
       delete[] output;
     }
   }
@@ -250,7 +251,6 @@ void bench_johnson(int iterations, unsigned long seed, bool check_correctness) {
   std::cout << "\n\nJohnson's Algorithm benchmarking results for seed=" << seed << "\n";
 
   print_table_header(check_correctness);
-  int block_size = 32; // Remove when parallel johnson comes into being
   for (double p = 0.25; p < 1.0; p += 0.25) {
     for (int v = 64; v <= 2048; v *= 2) {
       // johnson init
@@ -283,7 +283,10 @@ void bench_johnson(int iterations, unsigned long seed, bool check_correctness) {
         std::memset(output, 0, v*v*sizeof(int));
         auto start = std::chrono::high_resolution_clock::now();
         // TODO: johnson parallel -- temporarily putting floyd_warshall here
-        floyd_warshall_blocked(matrix, output, v, block_size);
+        //floyd_warshall_blocked(matrix, output, v, block_size);
+        std::cerr << "Starting parallel Johnson\n";
+        johnson_parallel(gr, output);
+        std::cerr << "Parallel Johnson success\n";
         auto end = std::chrono::high_resolution_clock::now();
 
         if (check_correctness) {
