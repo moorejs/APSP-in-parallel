@@ -83,7 +83,11 @@ bool bellman_ford(graph_t* gr, int* dist, int src) {
   }
   dist[src] = 0;
 
+
   for (int i = 1; i <= V-1; i++) {
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
     for (int j = 0; j < E; j++) {
       int u = std::get<0>(edges[j]);
       int v = std::get<1>(edges[j]);
@@ -165,4 +169,9 @@ void johnson_parallel(graph_t *gr, int* output) {
       output[s*gr->V + v] = d[v] + h[v] - h[s];
     }
   }
+
+  delete[] h;
+  delete[] bf_graph->edge_array;
+  delete[] bf_graph->weights;
+  delete bf_graph;
 }

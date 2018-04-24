@@ -19,15 +19,16 @@ bool correctness_check(int* output, int n_output, int* solution, int n_solution)
 }
 
 void print_usage() {
-  std::cout << "\nUsage: asap [-n INT] [-p DOUBLE] [-a (f|j)] [-s LONG] [-b INT] [-c]\n";
+  std::cout << "\nUsage: asap [-n INT] [-p DOUBLE] [-a (f|j)] [-s LONG] [-b INT] [-c] [-t INT]\n";
   std::cout << "\t-h\t\tPrint this message\n";
   std::cout << "\t-n INT\t\tGraph size, default 1024\n";
-  std::cout << "\t-p DOUBLE\t\tProbability of edge from a given node to another (0.0 to 1.0), default 0.5\n";
+  std::cout << "\t-p DOUBLE\tProbability of edge from a given node to another (0.0 to 1.0), default 0.5\n";
   std::cout << "\t-a CHAR\t\tAlgorithm to use for all pairs shortest path\n";
   std::cout << "\t\t\t\tf: Floyd-Warshall (default)\n";
   std::cout << "\t\t\t\tj: Johnson's Algorithm\n";
   std::cout << "\t-s LONG\t\tSeed for graph generation\n";
-  std::cout << "\t-b INT\t\tNumber of times to run the benchmark, default 1\n";
+  std::cout << "\t-b\t\tRun benchmark sequential vs parallel\n";
+  std::cout << "\t-t INT\t\tNumber of threads to run\n";
   std::cout << "\t-c\t\tCheck correctness\n";
   std::cout << "\n";
 }
