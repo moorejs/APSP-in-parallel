@@ -16,7 +16,7 @@ inline int* floyd_warshall_init(const int n, const double p, const unsigned long
     for (int j = 0; j < n; j++) {
       if (i == j) {
         out[i*n + j] = 0;
-      } else if (flip(rand_engine) > p) {
+      } else if (flip(rand_engine) < p) {
         out[i*n + j] = choose_weight(rand_engine);
       } else {
         // "infinity" - the highest value we can still safely add two infinities
@@ -50,7 +50,7 @@ inline int* floyd_warshall_blocked_init(const int n, const int block_size, const
     for (int j = 0; j < n_oversized; j++) {
       if (i == j) {
         out[i*n_oversized + j] = 0;
-      } else if (i < n && j < n && flip(rand_engine) > p) {
+      } else if (i < n && j < n && flip(rand_engine) < p) {
         out[i*n_oversized + j] = choose_weight(rand_engine);
       } else {
         // "infinity" - the highest value we can still safely add two infinities
