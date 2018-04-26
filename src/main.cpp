@@ -7,6 +7,8 @@
 #include <sstream> // stringstream
 #include <ratio>  // milli
 
+#include <boost/graph/johnson_all_pairs_shortest.hpp> // seq algorithm, distance_map
+
 #ifdef _OPENMP
 #include "omp.h" // omp_set_num_threads
 #endif
@@ -145,7 +147,12 @@ int main(int argc, char* argv[]) {
       std::cout << "Using Floyd-Warshall's on " << n_blocked << "x" << n_blocked
 		<< " with p=" << p << " and seed=" << seed << "\n";
       auto start = std::chrono::high_resolution_clock::now();
+#ifdef CUDA
+      std::cout << "CUDA!\n";
+      floyd_warshall_blocked_cuda();
+#else
       floyd_warshall_blocked(matrix, output, n_blocked, block_size);
+#endif
       auto end = std::chrono::high_resolution_clock::now();
       std::chrono::duration<double, std::milli> start_to_end = end - start;
       std::cout << "Algorithm runtime: " << start_to_end.count() << "ms\n\n";
@@ -171,7 +178,6 @@ int main(int argc, char* argv[]) {
       //std::vector<int> d(num_vertices(G));
 
       auto start = std::chrono::high_resolution_clock::now();
-      //johnson_all_pairs_shortest_paths(G, out, distance_map(&d[0]));
       johnson_parallel(gr, output);
       auto end = std::chrono::high_resolution_clock::now();
       std::chrono::duration<double, std::milli> start_to_end = end - start;

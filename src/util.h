@@ -4,7 +4,7 @@
 #include <string> // string
 #include <sstream> // stringstream
 
-bool correctness_check(int* output, int n_output, int* solution, int n_solution) {
+inline bool correctness_check(int* output, int n_output, int* solution, int n_solution) {
   for (int i = 0; i < n_solution; i++) {
     for (int j = 0; j < n_solution; j++) {
       if (output[i*n_output + j] != solution[i*n_solution + j]) {
@@ -18,7 +18,7 @@ bool correctness_check(int* output, int n_output, int* solution, int n_solution)
   return true;
 }
 
-void print_usage() {
+inline void print_usage() {
   std::cout << "\nUsage: asap [-n INT] [-p DOUBLE] [-a (f|j)] [-s LONG] [-b INT] [-c] [-t INT]\n";
   std::cout << "\t-h\t\tPrint this message\n";
   std::cout << "\t-n INT\t\tGraph size, default 1024\n";
@@ -33,14 +33,14 @@ void print_usage() {
   std::cout << "\n";
 }
 
-void print_table_row(double p, int v, double seq, double par, bool check_correctness, bool correct) {
+inline void print_table_row(double p, int v, double seq, double par, bool check_correctness, bool correct) {
   std::printf("\n| %-3.2f | %-7d | %-12.3f | %-12.3f | %-10.3f |", p, v, seq, par, seq /par);
   if (check_correctness) {
     std::printf(" %-8s |", (correct ? "x" : "!"));
   }
 }
 
-void print_table_break(bool check_correctness) {
+inline void print_table_break(bool check_correctness) {
   if (check_correctness) {
     std::printf("\n ----------------------------------------------------------------------");
   } else {
@@ -48,7 +48,7 @@ void print_table_break(bool check_correctness) {
   }
 }
 
-void print_table_header(bool check_correctness) {
+inline void print_table_header(bool check_correctness) {
   print_table_break(check_correctness);
   std::printf("\n| %-4s | %-7s | %-12s | %-12s | %-10s |",
       "p", "verts", "seq (ms)", "par (ms)", "speedup");
