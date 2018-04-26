@@ -30,7 +30,7 @@ inline graph_t *johnson_init(const int n, const double p, const unsigned long se
     for (int j = 0; j < n; j++) {
       if (i == j) {
         adj_matrix[i*n + j] = 0;
-      } else if (flip(rand_engine) > p) {
+      } else if (flip(rand_engine) < p) {
         adj_matrix[i*n + j] = choose_weight(rand_engine);
         E ++;
       } else {
