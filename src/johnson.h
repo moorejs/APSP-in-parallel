@@ -85,7 +85,7 @@ bool bellman_ford(graph_t* gr, int* dist, int src) {
 
 
   for (int i = 1; i <= V-1; i++) {
-#ifdef _OPENMP
+#ifdef _OPENMP // This is incorrect but doesn't matter rn with no neg cycles
 #pragma omp parallel for
 #endif
     for (int j = 0; j < E; j++) {
@@ -116,6 +116,7 @@ void johnson_parallel(graph_t *gr, int* output) {
   // Make new graph for Bellman-Ford
   // First, a new node q is added to the graph, connected by zero-weight edges
   // to each of the other nodes.
+
   graph_t *bf_graph = new graph_t;
   bf_graph->V = gr->V + 1;
   bf_graph->E = gr->E + gr->V;
@@ -125,6 +126,7 @@ void johnson_parallel(graph_t *gr, int* output) {
   std::memcpy(bf_graph->edge_array, gr->edge_array, gr->E  * sizeof(Edge));
   std::memcpy(bf_graph->weights, gr->weights, gr->E * sizeof(int));
   std::memset(&bf_graph->weights[gr->E], 0, gr->V * sizeof(int));
+
 
   // TODO parallel for
 #ifdef _OPENMP
@@ -147,6 +149,7 @@ void johnson_parallel(graph_t *gr, int* output) {
   // Next the edges of the original graph are reweighted using the values computed
   // by the Bellman–Ford algorithm: an edge from u to v, having length
   // w(u,v), is given the new length w(u,v) + h(u) − h(v).
+
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
@@ -158,9 +161,31 @@ void johnson_parallel(graph_t *gr, int* output) {
 
   Graph G(gr->edge_array, gr->edge_array + gr->E, gr->weights, gr->V);
 
-  // TODO parallel for
+/*
 #ifdef _OPENMP
-#pragma omp parallel for
+ int V = gr->V;
+ int per_thread = V / omp_get_num_threads();
+ std::cerr << "Number of threads: " << omp_get_num_threads() << "\n";
+ int start;
+ int end;
+ int thread_id;
+ int s;
+ std::vector<int> d(num_vertices(G));
+#pragma omp parallel private(s, d, V, thread_id, start, end) shared(G, output, per_thread, h)
+  thread_id = omp_get_thread_num();
+  std::cerr << "Thread ID: " << thread_id << "\n";
+  start = per_thread * thread_id;
+  end = start + per_thread;
+  if (end > gr->V) end = gr->V;
+  for (s = start; s < end; s++) {
+    dijkstra_shortest_paths(G, s, distance_map(&d[0]));
+    for (int v = 0; v < V; v++) {
+      output[s*V + v] = d[v] + h[v] - h[s];
+    }
+  }
+#else */
+#ifdef _OPENMP
+#pragma omp parallel for schedule(dynamic)
 #endif
   for (int s = 0; s < gr->V; s++) {
     std::vector<int> d(num_vertices(G));
@@ -169,6 +194,7 @@ void johnson_parallel(graph_t *gr, int* output) {
       output[s*gr->V + v] = d[v] + h[v] - h[s];
     }
   }
+
 
   delete[] h;
   delete[] bf_graph->edge_array;

@@ -19,7 +19,7 @@ bool correctness_check(int* output, int n_output, int* solution, int n_solution)
 }
 
 void print_usage() {
-  std::cout << "\nUsage: asap [-n INT] [-p DOUBLE] [-a (f|j)] [-s LONG] [-b INT] [-c] [-t INT]\n";
+  std::cout << "\nUsage: apsp [-n INT] [-p DOUBLE] [-a (f|j)] [-s LONG] [-b] [-c] [-t INT]\n";
   std::cout << "\t-h\t\tPrint this message\n";
   std::cout << "\t-n INT\t\tGraph size, default 1024\n";
   std::cout << "\t-p DOUBLE\tProbability of edge from a given node to another (0.0 to 1.0), default 0.5\n";
