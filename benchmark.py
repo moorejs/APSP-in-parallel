@@ -31,6 +31,25 @@ bench_list = [
     ]
 ]
 
+thread_bench = [
+    [
+        { 'n': 1024, 't': 1, 'p': 0.5 },
+        { 'n': 1024, 't': 2, 'p': 0.5 },
+        { 'n': 1024, 't': 3, 'p': 0.5 },
+        { 'n': 1024, 't': 4, 'p': 0.5 },
+        { 'n': 1024, 't': 5, 'p': 0.5 },
+        { 'n': 1024, 't': 6, 'p': 0.5 },
+        { 'n': 1024, 't': 7, 'p': 0.5 },
+        { 'n': 1024, 't': 8, 'p': 0.5 },
+        { 'n': 1024, 't': 9, 'p': 0.5 },
+        { 'n': 1024, 't': 10, 'p': 0.5 },
+        { 'n': 1024, 't': 11, 'p': 0.5 },
+        { 'n': 1024, 't': 12, 'p': 0.5 },
+    ]
+]
+
+BENCH_TO_USE = thread_bench
+
 DEFAULT_BLOCK_SIZE = 8
 
 parser = argparse.ArgumentParser()
@@ -63,16 +82,17 @@ def extract_time(stdout):
 
 def run_bench(bench_list, algorithm, seed, block_size, verbose):
     print ''
-    print ' {:-^47} '.format('')
-    print '|{:^47}|'.format('  Benchmark for {}\'s Algorithm  '
+    print ' {:-^52} '.format('')
+    print '|{:^52}|'.format('  Benchmark for {}\'s Algorithm  '
                              .format('Floyd-Warshall' if algorithm is 'f' else 'Johnson'))
-    print '|{:^47}|'.format('seed = {}{}'.format(seed, ', block size = {}'.format(block_size) if algorithm is 'f' else ''))
-    print ' {:-^47} '.format('')
-    print '| {:<4} | {:<5} | {:<8} | {:<8} | {:<8} |'.format('p', 'n', 'seq (ms)', 
-                                                             'par (ms)', 'speedup')
+    print '|{:^52}|'.format('seed = {}{}'.format(seed, ', block size = {}'.format(block_size) if algorithm is 'f' else ''))
+    print ' {:-^52} '.format('')
+    print '| {:<4} | {:<5} | {:<2} | {:<8} | {:<8} | {:<8} |'.format('p', 'n', 't', 'seq (ms)', 
+                                                                     'par (ms)', 'speedup')
 
     for bench in bench_list:
-        print ' {:-^47} '.format('')
+        print ' {:-^52} '.format('')
+
         for param_obj in bench:
             param_obj['a'] = algorithm
             param_obj['s'] = seed
@@ -94,11 +114,11 @@ def run_bench(bench_list, algorithm, seed, block_size, verbose):
 
             omp_time = extract_time(stdout)
 
-            print '| {p:>4.2f} | {n:>5} | {:>8.1f} | {:>8.1f} | {:>7.1f}x |'.format(seq_time, omp_time, 
-                                                                                    seq_time / omp_time, 
-                                                                                    **param_obj)
+            print '| {p:>4.2f} | {n:>5} | {t:>2} | {:>8.1f} | {:>8.1f} | {:>7.1f}x |'.format(seq_time, omp_time, 
+                                                                                             seq_time / omp_time, 
+                                                                                             **param_obj)
 
-    print ' {:-^47} '.format('')
+    print ' {:-^52} '.format('')
     print ''
         
-run_bench(bench_list, args.algorithm, args.seed, args.block_size, args.verbose)
+run_bench(BENCH_TO_USE, args.algorithm, args.seed, args.block_size, args.verbose)
