@@ -1,9 +1,8 @@
-bin/*
-build-seq/*
-build-omp/*
+build/*
 
 .vscode/*
 
 solution_cache/*
 apsp-seq
 apsp-omp
+apsp-cuda
