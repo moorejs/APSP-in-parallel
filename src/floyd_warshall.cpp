@@ -1,7 +1,7 @@
 #include <cstring> // memcpy
 #include <random> // mt19937_64, uniform_x_distribution
 
-#include "floyd_warshall.h"
+#include "floyd_warshall.hpp"
 
 int* floyd_warshall_init(const int n, const double p, const unsigned long seed) {
   static std::uniform_real_distribution<double> flip(0, 1);
@@ -63,8 +63,8 @@ void floyd_warshall(const int* input, int* output, const int n) {
   std::memcpy(output, input, n * n * sizeof(int));
 
   for (int k = 0; k < n; k++) {
-    for (int j = 0; j < n; j++) {
-      for (int i = 0; i < n; i++) {
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
         if (output[i*n + j] > output[i*n + k] + output[k*n + j]) {
           output[i*n + j] = output[i*n + k] + output[k*n + j];
         }

@@ -13,9 +13,9 @@
 #include "omp.h" // omp_set_num_threads
 #endif
 
-#include "util.h"
-#include "johnson.h"
-#include "floyd_warshall.h"
+#include "util.hpp"
+#include "johnson.hpp"
+#include "floyd_warshall.hpp"
 
 void bench_floyd_warshall(int interations, unsigned long seed, int block_size, bool check_correctness);
 void bench_johnson(int iterations, unsigned long seed, bool check_correctness);
