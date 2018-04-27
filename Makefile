@@ -6,50 +6,53 @@ LDFLAGS ?=
 NVCC ?= nvcc
 NVCCFLAGS ?= -O3 --gpu-architecture compute_61
 
+OBJ_DIR := objs
+
+SEQ := apsp-seq
+OMP := apsp-omp
+CUDA := apsp-cuda
+
 SOURCES := $(shell find src -name '*cpp')
 
-SEQ_OBJECTS = $(SOURCES:src/%.cpp=build/seq-%.o)
-OMP_OBJECTS = $(SOURCES:src/%.cpp=build/omp-%.o)
+SEQ_OBJECTS = $(SOURCES:src/%.cpp=$(OBJ_DIR)/seq-%.o)
+OMP_OBJECTS = $(SOURCES:src/%.cpp=$(OBJ_DIR)/omp-%.o)
 
 CUDA_SOURCES := $(shell find src -name '*cu')
-CUDA_OBJECTS := $(CUDA_SOURCES:src/%.cu=build/cuda-%.o)
+CUDA_OBJECTS := $(CUDA_SOURCES:src/%.cu=$(OBJ_DIR)/cuda-%.o)
 
-print-%: ; @echo $* = $($*)
+$(OMP) $(CUDA): CXXFLAGS += -fopenmp
+$(OMP) $(CUDA): LDFLAGS += -fopenmp
 
-omp cuda: CXXFLAGS += -fopenmp
-omp cuda: LDFLAGS += -fopenmp
+$(CUDA): CXXFLAGS += -DCUDA -lcudart
+$(CUDA): LDFLAGS += -L/usr/local/depot/cuda-8.0/lib64/ -lcudart # this is different for Latedays
 
-cuda: CXXFLAGS += -DCUDA -lcudart
-cuda: LDFLAGS += -L/usr/local/depot/cuda-8.0/lib64/ -lcudart # this is different for Latedays
+all: $(SEQ) $(OMP) $(CUDA)
 
-all: seq omp cuda
+$(SEQ): $(SEQ_OBJECTS) | $(OBJ_DIR)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) $^ -o $@
 
-dirs:
-	mkdir -p build
+$(OMP): $(OMP_OBJECTS) | $(OBJ_DIR)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) $^ -o $@
 
-seq: dirs $(SEQ_OBJECTS)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(SEQ_OBJECTS) -o apsp-$@
+$(CUDA): $(OMP_OBJECTS) $(CUDA_OBJECTS) | $(OBJ_DIR)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) $^ -o $@
 
-omp: dirs $(OMP_OBJECTS)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(OMP_OBJECTS) -o apsp-$@
-
-cuda: dirs $(OMP_OBJECTS) $(CUDA_OBJECTS)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(OMP_OBJECTS) $(CUDA_OBJECTS) -o apsp-$@
-
-build/seq-%.o: src/%.cpp
+$(OBJ_DIR)/seq-%.o: src/%.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-build/omp-%.o: src/%.cpp
+$(OBJ_DIR)/omp-%.o: src/%.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-build/cuda-%.o: src/%.cu
+$(OBJ_DIR)/cuda-%.o: src/%.cu
 	$(NVCC) $(NVCCFLAGS) -c $< -o $@
 
+$(OBJ_DIR):
+	mkdir -p $@
+
 clean:
-	$(RM) -r build
+	$(RM) -r $(OBJ_DIR)
 
-	$(RM) apsp-seq
-	$(RM) apsp-omp
-	$(RM) apsp-cuda
+	$(RM) $(SEQ)
+	$(RM) $(OMP)
+	$(RM) $(CUDA)
 
-	$(RM) -r solution_cache
