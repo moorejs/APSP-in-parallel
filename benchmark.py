@@ -4,52 +4,59 @@ import subprocess
 import re # regex
 import argparse
 
-bench_list = [
-    [
-        { 'n': 256, 't': 12, 'p': 0.25 },
-        { 'n': 512, 't': 12, 'p': 0.25 },
-        { 'n': 1024, 't': 12, 'p': 0.25 },
-        { 'n': 1024+512, 't': 12, 'p': 0.25 },
+
+all_benchmarks = {
+    'normal': [
+        [
+            { 'n': 256, 't': 12, 'p': 0.25 },
+            { 'n': 512, 't': 12, 'p': 0.25 },
+            { 'n': 1024, 't': 12, 'p': 0.25 },
+            { 'n': 1024+512, 't': 12, 'p': 0.25 },
+        ],
+        [
+            { 'n': 256, 't': 12, 'p': 0.5 },
+            { 'n': 512, 't': 12, 'p': 0.5 },
+            { 'n': 1024, 't': 12, 'p': 0.5 },
+            { 'n': 1024+512, 't': 12, 'p': 0.5 },
+        ],
+        [
+            { 'n': 256, 't': 12, 'p': 0.75 },
+            { 'n': 512, 't': 12, 'p': 0.75 },
+            { 'n': 1024, 't': 12, 'p': 0.75 },
+            { 'n': 1024+512, 't': 12, 'p': 0.75 },
+        ],
+        [
+            { 'n': 256, 't': 12, 'p': 1.0 },
+            { 'n': 512, 't': 12, 'p': 1.0 },
+            { 'n': 1024, 't': 12, 'p': 1.0 },
+            { 'n': 1024+512, 't': 12, 'p': 1.0 },
+        ]
     ],
-    [
-        { 'n': 256, 't': 12, 'p': 0.5 },
-        { 'n': 512, 't': 12, 'p': 0.5 },
-        { 'n': 1024, 't': 12, 'p': 0.5 },
-        { 'n': 1024+512, 't': 12, 'p': 0.5 },
+    'brief': [
+        [
+            { 'n': 1024, 't': 12, 'p': 0.5 },
+            { 'n': 2048, 't': 12, 'p': 0.5 },
+        ]
     ],
-    [
-        { 'n': 256, 't': 12, 'p': 0.75 },
-        { 'n': 512, 't': 12, 'p': 0.75 },
-        { 'n': 1024, 't': 12, 'p': 0.75 },
-        { 'n': 1024+512, 't': 12, 'p': 0.75 },
-    ],
-    [
-        { 'n': 256, 't': 12, 'p': 1.0 },
-        { 'n': 512, 't': 12, 'p': 1.0 },
-        { 'n': 1024, 't': 12, 'p': 1.0 },
-        { 'n': 1024+512, 't': 12, 'p': 1.0 },
+    'thread_scale': [
+        [
+            { 'n': 1024, 't': 1, 'p': 0.5 },
+            { 'n': 1024, 't': 2, 'p': 0.5 },
+            { 'n': 1024, 't': 3, 'p': 0.5 },
+            { 'n': 1024, 't': 4, 'p': 0.5 },
+            { 'n': 1024, 't': 5, 'p': 0.5 },
+            { 'n': 1024, 't': 6, 'p': 0.5 },
+            { 'n': 1024, 't': 7, 'p': 0.5 },
+            { 'n': 1024, 't': 8, 'p': 0.5 },
+            { 'n': 1024, 't': 9, 'p': 0.5 },
+            { 'n': 1024, 't': 10, 'p': 0.5 },
+            { 'n': 1024, 't': 11, 'p': 0.5 },
+            { 'n': 1024, 't': 12, 'p': 0.5 },
+        ]
     ]
-]
+}
 
-thread_bench = [
-    [
-        { 'n': 1024, 't': 1, 'p': 0.5 },
-        { 'n': 1024, 't': 2, 'p': 0.5 },
-        { 'n': 1024, 't': 3, 'p': 0.5 },
-        { 'n': 1024, 't': 4, 'p': 0.5 },
-        { 'n': 1024, 't': 5, 'p': 0.5 },
-        { 'n': 1024, 't': 6, 'p': 0.5 },
-        { 'n': 1024, 't': 7, 'p': 0.5 },
-        { 'n': 1024, 't': 8, 'p': 0.5 },
-        { 'n': 1024, 't': 9, 'p': 0.5 },
-        { 'n': 1024, 't': 10, 'p': 0.5 },
-        { 'n': 1024, 't': 11, 'p': 0.5 },
-        { 'n': 1024, 't': 12, 'p': 0.5 },
-    ]
-]
-
-BENCH_TO_USE = thread_bench
-
+DEFAULT_BENCH = 'normal'
 DEFAULT_BLOCK_SIZE = 8
 
 parser = argparse.ArgumentParser()
@@ -59,6 +66,8 @@ parser.add_argument('-s', '--seed', default=42,
                     help='Seed for graph generation')
 parser.add_argument('-d', '--block_size', default=DEFAULT_BLOCK_SIZE, 
                     help='The block size of the graph for Floyd-Warshall')
+parser.add_argument('-b', '--benchmark', choices=all_benchmarks.keys(), default=DEFAULT_BENCH,
+                    help='The name of the benchmark to run')
 parser.add_argument('-v', '--verbose', action='store_true',
                     help='Print commands as they run')
 args = parser.parse_args()
@@ -121,4 +130,4 @@ def run_bench(bench_list, algorithm, seed, block_size, verbose):
     print ' {:-^52} '.format('')
     print ''
         
-run_bench(BENCH_TO_USE, args.algorithm, args.seed, args.block_size, args.verbose)
+run_bench(all_benchmarks[args.benchmark], args.algorithm, args.seed, args.block_size, args.verbose)

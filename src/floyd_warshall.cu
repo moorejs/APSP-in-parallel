@@ -5,7 +5,7 @@
 #include <cuda_runtime.h>
 #include <driver_functions.h>
 
-#include "floyd_warshall.h"
+#include "floyd_warshall.hpp"
 
 __global__ void kernel() {
 
