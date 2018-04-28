@@ -82,6 +82,7 @@ int main(int argc, char* argv[]) {
   }
 
 #ifdef _OPENMP
+  omp_set_nested(1);
   omp_set_num_threads(thread_count);
 #else
   (void)thread_count; // suppress unused warning
