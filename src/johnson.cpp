@@ -55,6 +55,7 @@ graph_t *johnson_init(const int n, const double p, const unsigned long seed) {
 void free_graph(graph_t* g) {
   delete[] g->edge_array;
   delete[] g->weights;
+  delete g;
 }
 
 inline bool bellman_ford(graph_t* gr, int* dist, int src) {
@@ -101,24 +102,26 @@ inline bool bellman_ford(graph_t* gr, int* dist, int src) {
 
 void johnson_parallel(graph_t *gr, int* output) {
 
+  int V = gr->V;
+
   // Make new graph for Bellman-Ford
   // First, a new node q is added to the graph, connected by zero-weight edges
   // to each of the other nodes.
   graph_t *bf_graph = new graph_t;
-  bf_graph->V = gr->V + 1;
-  bf_graph->E = gr->E + gr->V;
+  bf_graph->V = V + 1;
+  bf_graph->E = gr->E + V;
   bf_graph->edge_array = new Edge[bf_graph->E];
   bf_graph->weights = new int[bf_graph->E];
 
   std::memcpy(bf_graph->edge_array, gr->edge_array, gr->E  * sizeof(Edge));
   std::memcpy(bf_graph->weights, gr->weights, gr->E * sizeof(int));
-  std::memset(&bf_graph->weights[gr->E], 0, gr->V * sizeof(int));
+  std::memset(&bf_graph->weights[gr->E], 0, V * sizeof(int));
 
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
-  for (int e = 0; e < gr->V; e++) {
-    bf_graph->edge_array[e + gr->E] = Edge(gr->V, e);
+  for (int e = 0; e < V; e++) {
+    bf_graph->edge_array[e + gr->E] = Edge(V, e);
   }
 
   // Second, the Bellman–Ford algorithm is used, starting from the new vertex q,
@@ -126,9 +129,9 @@ void johnson_parallel(graph_t *gr, int* output) {
   // this step detects a negative cycle, the algorithm is terminated.
   // TODO Can run parallel version?
   int* h = new int[bf_graph->V];
-  bool r = bellman_ford(bf_graph, h, gr->V);
+  bool r = bellman_ford(bf_graph, h, V);
   if (!r) {
-    std::cerr << "Negative Cycles Detected! Terminating Early\n";
+    std::cerr << "\nNegative Cycles Detected! Terminating Early\n";
     return;
   }
   // Next the edges of the original graph are reweighted using the values computed
@@ -143,21 +146,20 @@ void johnson_parallel(graph_t *gr, int* output) {
     gr->weights[e] = gr->weights[e] + h[u] - h[v];
   }
 
-  Graph G(gr->edge_array, gr->edge_array + gr->E, gr->weights, gr->V);
+  Graph G(gr->edge_array, gr->edge_array + gr->E, gr->weights, V);
 
 #ifdef _OPENMP
-#pragma omp parallel for
+#pragma omp parallel for schedule(dynamic)
 #endif
-  for (int s = 0; s < gr->V; s++) {
+  for (int s = 0; s < V; s++) {
     std::vector<int> d(num_vertices(G));
     dijkstra_shortest_paths(G, s, distance_map(&d[0]));
-    for (int v = 0; v < gr->V; v++) {
-      output[s*gr->V + v] = d[v] + h[v] - h[s];
+    for (int v = 0; v < V; v++) {
+      output[s*V + v] = d[v] + h[v] - h[s];
     }
   }
 
   delete[] h;
-  delete[] bf_graph->edge_array;
-  delete[] bf_graph->weights;
-  delete bf_graph;
+
+  free_graph(bf_graph);
 }
