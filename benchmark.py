@@ -53,6 +53,14 @@ all_benchmarks = {
             { 'n': 1024, 't': 11, 'p': 0.5 },
             { 'n': 1024, 't': 12, 'p': 0.5 },
         ]
+    ],
+    'serious': [
+        [
+            { 'n': 1024, 't': 12, 'p': 0.5 },
+            { 'n': 2048, 't': 12, 'p': 0.5 },
+            { 'n': 4096, 't': 12, 'p': 0.5 },
+            { 'n': 8192, 't': 12, 'p': 0.5 },
+        ]
     ]
 }
 
@@ -91,16 +99,16 @@ def extract_time(stdout):
 
 def run_bench(bench_list, algorithm, seed, block_size, verbose):
     print ''
-    print ' {:-^52} '.format('')
-    print '|{:^52}|'.format('  Benchmark for {}\'s Algorithm  '
+    print ' {0:-^52} '.format('')
+    print '|{0:^52}|'.format('  Benchmark for {0}\'s Algorithm  '
                              .format('Floyd-Warshall' if algorithm is 'f' else 'Johnson'))
-    print '|{:^52}|'.format('seed = {}{}'.format(seed, ', block size = {}'.format(block_size) if algorithm is 'f' else ''))
-    print ' {:-^52} '.format('')
-    print '| {:<4} | {:<5} | {:<2} | {:<8} | {:<8} | {:<8} |'.format('p', 'n', 't', 'seq (ms)', 
+    print '|{0:^52}|'.format('seed = {0}{1}'.format(seed, ', block size = {0}'.format(block_size) if algorithm is 'f' else ''))
+    print ' {0:-^52} '.format('')
+    print '| {0:<4} | {1:<5} | {2:<2} | {3:<8} | {4:<8} | {5:<8} |'.format('p', 'n', 't', 'seq (ms)', 
                                                                      'par (ms)', 'speedup')
 
     for bench in bench_list:
-        print ' {:-^52} '.format('')
+        print ' {0:-^52} '.format('')
 
         for param_obj in bench:
             param_obj['a'] = algorithm
@@ -123,11 +131,11 @@ def run_bench(bench_list, algorithm, seed, block_size, verbose):
 
             omp_time = extract_time(stdout)
 
-            print '| {p:>4.2f} | {n:>5} | {t:>2} | {:>8.1f} | {:>8.1f} | {:>7.1f}x |'.format(seq_time, omp_time, 
+            print '| {p:>4.2f} | {n:>5} | {t:>2} | {0:>8.1f} | {1:>8.1f} | {2:>7.1f}x |'.format(seq_time, omp_time, 
                                                                                              seq_time / omp_time, 
                                                                                              **param_obj)
 
-    print ' {:-^52} '.format('')
+    print ' {0:-^52} '.format('')
     print ''
         
 run_bench(all_benchmarks[args.benchmark], args.algorithm, args.seed, args.block_size, args.verbose)

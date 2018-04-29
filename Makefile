@@ -24,17 +24,23 @@ $(OMP) $(CUDA): CXXFLAGS += -fopenmp
 $(OMP) $(CUDA): LDFLAGS += -fopenmp
 
 $(CUDA): CXXFLAGS += -DCUDA -lcudart
-$(CUDA): LDFLAGS += -L/usr/local/depot/cuda-8.0/lib64/ -lcudart # this is different for Latedays
+
+ifeq ($(LATEDAYS),) # if LATEDAYS not set
+$(CUDA): LDFLAGS += -L/usr/local/depot/cuda-8.0/lib64/ -lcudart
+else
+CXXFLAGS += -I/opt/boost-1.61.0/include -Isrc/
+$(CUDA): LDFLAGS += -L/opt/cuda-8.0/lib64 -lcudart
+endif
 
 all: $(SEQ) $(OMP) $(CUDA)
 
-$(SEQ): $(SEQ_OBJECTS) | $(OBJ_DIR)
+$(SEQ): $(SEQ_OBJECTS)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $^ -o $@
 
-$(OMP): $(OMP_OBJECTS) | $(OBJ_DIR)
+$(OMP): $(OMP_OBJECTS)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $^ -o $@
 
-$(CUDA): $(OMP_OBJECTS) $(CUDA_OBJECTS) | $(OBJ_DIR)
+$(CUDA): $(OMP_OBJECTS) $(CUDA_OBJECTS)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $^ -o $@
 
 $(OBJ_DIR)/seq-%.o: src/%.cpp
@@ -45,9 +51,6 @@ $(OBJ_DIR)/omp-%.o: src/%.cpp
 
 $(OBJ_DIR)/cuda-%.o: src/%.cu
 	$(NVCC) $(NVCCFLAGS) -c $< -o $@
-
-$(OBJ_DIR):
-	mkdir -p $@
 
 clean:
 	$(RM) -r $(OBJ_DIR)

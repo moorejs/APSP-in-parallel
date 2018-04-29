@@ -1,3 +1,4 @@
+#include <iostream> // cerr
 #include <random> // mt19937_64, uniform_x_distribution
 #include <vector>
 #include <boost/config.hpp>
