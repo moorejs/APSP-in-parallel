@@ -4,7 +4,8 @@ CXXFLAGS ?= -std=c++11 -Wall -Wextra -g -O3
 LDFLAGS ?=
 
 NVCC ?= nvcc
-NVCCFLAGS ?= -O3 --gpu-architecture compute_61
+NVCCFLAGS ?= -O3
+# more NVCC flags added below depending on machine
 
 OBJ_DIR := objs
 
@@ -25,11 +26,13 @@ $(OMP) $(CUDA): LDFLAGS += -fopenmp
 
 $(CUDA): CXXFLAGS += -DCUDA -lcudart
 
-ifeq ($(LATEDAYS),) # if LATEDAYS not set
+ifeq ($(LATEDAYS),) # if LATEDAYS not set, assume GHC machines
 $(CUDA): LDFLAGS += -L/usr/local/depot/cuda-8.0/lib64/ -lcudart
+$(CUDA): NVCCFLAGS += -arch=compute_61 -code=sm_61
 else
 CXXFLAGS += -I/opt/boost-1.61.0/include -Isrc/
 $(CUDA): LDFLAGS += -L/opt/cuda-8.0/lib64 -lcudart
+$(CUDA): NVCCFLAGS += -arch=compute_35 -code=sm_35
 endif
 
 all: $(SEQ) $(OMP) $(CUDA)

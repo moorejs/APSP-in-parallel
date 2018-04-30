@@ -98,7 +98,8 @@ def run_cmd(command, verbose):
 def extract_time(stdout):
     return float(re.search(r'(\d*\.?\d*)ms', stdout).group(1))
 
-def run_bench(bench_list, algorithm, seed, block_size, verbose, cuda):
+def run_bench(bench_list, algorithm, seed, block_size, verbose, cuda, caching_seq=True, seq_cache={}):
+    
     print ''
     print ' {0:-^52} '.format('')
     print '|{0:^52}|'.format('  Benchmark for {0}\'s Algorithm  '
@@ -117,25 +118,29 @@ def run_bench(bench_list, algorithm, seed, block_size, verbose, cuda):
             param_obj['d'] = block_size
             params = create_cmd(param_obj)
 
-            stdout, stderr = run_cmd(['./apsp-seq'] + params, verbose)
+            cache_key = str(param_obj['p']) + str(param_obj['n'])
+            if not caching_seq or cache_key not in seq_cache:
+                stdout, stderr = run_cmd(['./apsp-seq'] + params, verbose)
 
-            if len(stderr):
-                print 'Sequential Error: ' + stderr
-                return
+                if len(stderr):
+                    print 'Sequential Error: ' + stderr
+                    return
 
-            seq_time = extract_time(stdout)
+                seq_cache[cache_key] = extract_time(stdout)
 
-            if(cuda): stdout, stderr = run_cmd(['./apsp-cuda'] + params,verbose)
+            seq_time = seq_cache[cache_key]
+
+            if cuda: stdout, stderr = run_cmd(['./apsp-cuda'] + params,verbose)
             else: stdout, stderr = run_cmd(['./apsp-omp'] + params, verbose)
 
             if len(stderr):
-                print 'OMP Error: ' + stderr
+                print 'Parallel Error: ' + stderr
                 return
 
-            omp_time = extract_time(stdout)
+            par_time = extract_time(stdout)
 
-            print '| {p:>4.2f} | {n:>5} | {t:>2} | {0:>8.1f} | {1:>8.1f} | {2:>7.1f}x |'.format(seq_time, omp_time,
-                                                                                             seq_time / omp_time,
+            print '| {p:>4.2f} | {n:>5} | {t:>2} | {0:>8.1f} | {1:>8.1f} | {2:>7.1f}x |'.format(seq_time, par_time,
+                                                                                             seq_time / par_time,
                                                                                              **param_obj)
 
     print ' {0:-^52} '.format('')
