@@ -142,7 +142,6 @@ int main(int argc, char* argv[]) {
       if (block_remainder != 0) {
 	n_blocked = n + block_size - block_remainder;
       }
-
       output = new int[n_blocked * n_blocked];
 
       std::cout << "Using Floyd-Warshall's on " << n_blocked << "x" << n_blocked
@@ -150,7 +149,7 @@ int main(int argc, char* argv[]) {
       auto start = std::chrono::high_resolution_clock::now();
 #ifdef CUDA
       std::cout << "CUDA!\n";
-      floyd_warshall_blocked_cuda();
+      floyd_warshall_cuda(matrix, output, n_blocked);
 #else
       floyd_warshall_blocked(matrix, output, n_blocked, block_size);
 #endif

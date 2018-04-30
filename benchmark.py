@@ -72,19 +72,20 @@ parser.add_argument('-a', '--algorithm', choices=['f', 'j'], required=True,
                     help='Algorithm to benchmark')
 parser.add_argument('-s', '--seed', default=42,
                     help='Seed for graph generation')
-parser.add_argument('-d', '--block_size', default=DEFAULT_BLOCK_SIZE, 
+parser.add_argument('-d', '--block_size', default=DEFAULT_BLOCK_SIZE,
                     help='The block size of the graph for Floyd-Warshall')
 parser.add_argument('-b', '--benchmark', choices=all_benchmarks.keys(), default=DEFAULT_BENCH,
                     help='The name of the benchmark to run')
 parser.add_argument('-v', '--verbose', action='store_true',
                     help='Print commands as they run')
+parser.add_argument('-g', '--cuda', action='store_true', help='Run CUDA version')
 args = parser.parse_args()
 
 def create_cmd(params):
     cmd = []
     for attr, value in params.iteritems():
         cmd += ['-' + attr, str(value)]
-    
+
     return cmd
 
 def run_cmd(command, verbose):
@@ -97,14 +98,14 @@ def run_cmd(command, verbose):
 def extract_time(stdout):
     return float(re.search(r'(\d*\.?\d*)ms', stdout).group(1))
 
-def run_bench(bench_list, algorithm, seed, block_size, verbose):
+def run_bench(bench_list, algorithm, seed, block_size, verbose, cuda):
     print ''
     print ' {0:-^52} '.format('')
     print '|{0:^52}|'.format('  Benchmark for {0}\'s Algorithm  '
                              .format('Floyd-Warshall' if algorithm is 'f' else 'Johnson'))
     print '|{0:^52}|'.format('seed = {0}{1}'.format(seed, ', block size = {0}'.format(block_size) if algorithm is 'f' else ''))
     print ' {0:-^52} '.format('')
-    print '| {0:<4} | {1:<5} | {2:<2} | {3:<8} | {4:<8} | {5:<8} |'.format('p', 'n', 't', 'seq (ms)', 
+    print '| {0:<4} | {1:<5} | {2:<2} | {3:<8} | {4:<8} | {5:<8} |'.format('p', 'n', 't', 'seq (ms)',
                                                                      'par (ms)', 'speedup')
 
     for bench in bench_list:
@@ -113,6 +114,7 @@ def run_bench(bench_list, algorithm, seed, block_size, verbose):
         for param_obj in bench:
             param_obj['a'] = algorithm
             param_obj['s'] = seed
+            param_obj['d'] = block_size
             params = create_cmd(param_obj)
 
             stdout, stderr = run_cmd(['./apsp-seq'] + params, verbose)
@@ -120,22 +122,23 @@ def run_bench(bench_list, algorithm, seed, block_size, verbose):
             if len(stderr):
                 print 'Sequential Error: ' + stderr
                 return
-                
+
             seq_time = extract_time(stdout)
-                
-            stdout, stderr = run_cmd(['./apsp-omp'] + params, verbose)
-                
+
+            if(cuda): stdout, stderr = run_cmd(['./apsp-cuda'] + params,verbose)
+            else: stdout, stderr = run_cmd(['./apsp-omp'] + params, verbose)
+
             if len(stderr):
                 print 'OMP Error: ' + stderr
                 return
 
             omp_time = extract_time(stdout)
 
-            print '| {p:>4.2f} | {n:>5} | {t:>2} | {0:>8.1f} | {1:>8.1f} | {2:>7.1f}x |'.format(seq_time, omp_time, 
-                                                                                             seq_time / omp_time, 
+            print '| {p:>4.2f} | {n:>5} | {t:>2} | {0:>8.1f} | {1:>8.1f} | {2:>7.1f}x |'.format(seq_time, omp_time,
+                                                                                             seq_time / omp_time,
                                                                                              **param_obj)
 
     print ' {0:-^52} '.format('')
     print ''
-        
-run_bench(all_benchmarks[args.benchmark], args.algorithm, args.seed, args.block_size, args.verbose)
+
+run_bench(all_benchmarks[args.benchmark], args.algorithm, args.seed, args.block_size, args.verbose, args.cuda)

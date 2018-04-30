@@ -115,12 +115,13 @@ void floyd_warshall_blocked(const int* input, int* output, const int n, const in
     for (int i = 0; i < blocks; i++) {
       if (i == k) continue;
       floyd_warshall_in_place(&output[i*b*n + k*b], &output[i*b*n + k*b], &output[k*b*n + k*b], b, n);
+
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(thread_count)
 #endif
       for (int j = 0; j < blocks; j++) {
-	if (j == k) continue;
-	floyd_warshall_in_place(&output[i*b*n + j*b], &output[i*b*n + k*b], &output[k*b*n + j*b], b, n);
+	    if (j == k) continue;
+	    floyd_warshall_in_place(&output[i*b*n + j*b], &output[i*b*n + k*b], &output[k*b*n + j*b], b, n);
       }
     }
   }

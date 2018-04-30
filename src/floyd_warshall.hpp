@@ -13,4 +13,4 @@ void floyd_warshall(const int* input, int* output, const int n);
 // expects len(input) == len(output) == n*n
 void floyd_warshall_blocked(const int* input, int* output, const int n, const int b);
 
-void floyd_warshall_blocked_cuda();
+void floyd_warshall_cuda(int* input, int* output, int n);

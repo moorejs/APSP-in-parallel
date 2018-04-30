@@ -80,9 +80,9 @@ inline bool bellman_ford(graph_t* gr, int* dist, int src) {
     for (int j = 0; j < E; j++) {
       int u = std::get<0>(edges[j]);
       int v = std::get<1>(edges[j]);
-      int weight = weights[j];
-      if (dist[u] != INT_MAX && dist[u] + weight < dist[v])
-        dist[v] = dist[u] + weight;
+      int new_dist = weights[j] + dist[u];
+      if (dist[u] != INT_MAX && new_dist < dist[v])
+        dist[v] = new_dist;
     }
   }
 
@@ -160,6 +160,5 @@ void johnson_parallel(graph_t *gr, int* output) {
   }
 
   delete[] h;
-
   free_graph(bf_graph);
 }
