@@ -52,6 +52,65 @@ graph_t *johnson_init(const int n, const double p, const unsigned long seed) {
   return gr;
 }
 
+#ifdef CUDA
+void free_graph_cuda(graph_cuda_t *g) {
+  delete[] g->edge_array;
+  delete[] g->weights;
+  delete g;
+}
+
+void set_edge(edge_t *edge, int u, int v) {
+  edge->u = u;
+  edge->v = v;
+}
+
+graph_cuda_t *johnson_cuda_init(const int n, const double p, const unsigned long seed) {
+  static std::uniform_real_distribution<double> flip(0, 1);
+  static std::uniform_int_distribution<int> choose_weight(1, 100);
+
+  std::mt19937_64 rand_engine(seed);
+
+  int *adj_matrix = new int[n * n];
+  size_t E = 0;
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      if (i == j) {
+        adj_matrix[i*n + j] = 0;
+      } else if (flip(rand_engine) < p) {
+        adj_matrix[i*n + j] = choose_weight(rand_engine);
+        E ++;
+      } else {
+        adj_matrix[i*n + j] = INT_MAX;
+      }
+    }
+  }
+  Edge *edge_array = new edge_t[E];
+  int *weights = new int[E];
+  int ei = 0;
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      if (adj_matrix[i*n + j] != 0
+          && adj_matrix[i*n + j] != INT_MAX) {
+        set_edge(&edge_array[ei], i, j);
+        weights[ei] = adj_matrix[i*n + j];
+        ei++;
+      }
+    }
+  }
+
+  delete[] adj_matrix;
+
+  graph_t *gr = new graph_cuda_t;
+  gr->V = n;
+  gr->E = E;
+  gr->edge_array = edge_array;
+  gr->weights = weights;
+
+  return gr;
+}
+
+#endif
+
 void free_graph(graph_t* g) {
   delete[] g->edge_array;
   delete[] g->weights;

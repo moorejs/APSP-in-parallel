@@ -35,7 +35,7 @@ __host__ void floyd_warshall_blocked_cuda() {
 
 __forceinline__
 __device__ void calc(int* graph, int n, int k, int i, int j) {
-  if ((i >= n) || (j >= n) || (k >= n)) { return; }
+  if ((i >= n) || (j >= n) || (k >= n)) return;
   const unsigned int kj = k*n + j;
   const unsigned int ij = i*n + j;
   const unsigned int ik = i*n + k;
@@ -84,8 +84,6 @@ __host__ void floyd_warshall_cuda(int* input, int* output, int n) {
     floyd_warshall_kernel<<<grid_dim, block_dim>>>(n, k, device_graph);
     cudaThreadSynchronize();
   }
-
-
 
   cudaMemcpy(output, device_graph, size, cudaMemcpyDeviceToHost);
 
