@@ -4,7 +4,7 @@ CXXFLAGS ?= -std=c++11 -Wall -Wextra -g -O3
 LDFLAGS ?=
 
 NVCC ?= nvcc
-NVCCFLAGS ?= -O3
+NVCCFLAGS ?= -std=c++11 -O3
 # more NVCC flags added below depending on machine
 
 OBJ_DIR := objs
@@ -15,11 +15,12 @@ CUDA := apsp-cuda
 
 SOURCES := $(shell find src -name '*cpp')
 
-SEQ_OBJECTS = $(SOURCES:src/%.cpp=$(OBJ_DIR)/seq-%.o)
-OMP_OBJECTS = $(SOURCES:src/%.cpp=$(OBJ_DIR)/omp-%.o)
+SEQ_OBJECTS := $(SOURCES:src/%.cpp=$(OBJ_DIR)/seq-%.o)
+OMP_OBJECTS := $(SOURCES:src/%.cpp=$(OBJ_DIR)/omp-%.o)
+CUDA_CPP_OBJECTS := $(SOURCES:src/%.cpp=$(OBJ_DIR)/cuda-cpp-%.o)
 
-CUDA_SOURCES := $(shell find src -name '*cu')
-CUDA_OBJECTS := $(CUDA_SOURCES:src/%.cu=$(OBJ_DIR)/cuda-%.o)
+CUDA_CU_SOURCES := $(shell find src -name '*cu')
+CUDA_CU_OBJECTS := $(CUDA_CU_SOURCES:src/%.cu=$(OBJ_DIR)/cuda-cu-%.o)
 
 $(OMP) $(CUDA): CXXFLAGS += -fopenmp
 $(OMP) $(CUDA): LDFLAGS += -fopenmp
@@ -43,7 +44,7 @@ $(SEQ): $(SEQ_OBJECTS)
 $(OMP): $(OMP_OBJECTS)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $^ -o $@
 
-$(CUDA): $(OMP_OBJECTS) $(CUDA_OBJECTS)
+$(CUDA): $(CUDA_CPP_OBJECTS) $(CUDA_CU_OBJECTS)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $^ -o $@
 
 $(OBJ_DIR)/seq-%.o: src/%.cpp
@@ -52,7 +53,10 @@ $(OBJ_DIR)/seq-%.o: src/%.cpp
 $(OBJ_DIR)/omp-%.o: src/%.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-$(OBJ_DIR)/cuda-%.o: src/%.cu
+$(OBJ_DIR)/cuda-cpp-%.o: src/%.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(OBJ_DIR)/cuda-cu-%.o: src/%.cu
 	$(NVCC) $(NVCCFLAGS) -c $< -o $@
 
 clean:
