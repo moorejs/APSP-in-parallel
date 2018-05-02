@@ -168,24 +168,28 @@ int main(int argc, char* argv[]) {
     if (benchmark) {
       bench_johnson(1, seed, check_correctness);
     } else {
-      graph_t *gr = johnson_init(n, p, seed);
-      //int **out = new int*[n];
       int *output = new int[n * n];
-      //for (int i = 0; i < n; i++) out[i] = &output[i*n];
       std::cout << "Using Johnson's on " << n << "x" << n
                 << " with p=" << p << " and seed=" << seed << "\n";
-      //Graph G(gr->edge_array, gr->edge_array + gr->E, gr->weights, gr->V);
-      //std::vector<int> d(num_vertices(G));
-
+#ifdef CUDA
+      std::cout << "CUDA!\n";
+      graph_cuda_t* cuda_gr = johnson_cuda_init(n, p, seed);
+      auto start = std::chrono::high_resolution_clock::now();
+      johnson_cuda(cuda_gr, output);
+      auto end = std::chrono::high_resolution_clock::now();
+      free_cuda_graph(cuda_gr);
+#else
+      graph_t *gr = johnson_init(n, p, seed);
       auto start = std::chrono::high_resolution_clock::now();
       johnson_parallel(gr, output);
       auto end = std::chrono::high_resolution_clock::now();
+#endif
       std::chrono::duration<double, std::milli> start_to_end = end - start;
       std::cout << "Algorithm runtime: " << start_to_end.count() << "ms\n\n";
 
       if (check_correctness) correctness_check(output, n, solution, n);
 
-      //delete[] out;
+      //free_graph(gr);
       delete[] output;
     }
   }

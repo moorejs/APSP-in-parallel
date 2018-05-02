@@ -17,7 +17,6 @@ typedef struct graph {
 
 graph_t* johnson_init(const int n, const double p, const unsigned long seed);
 
-//#ifdef CUDA
 typedef struct edge {
   int u;
   int v;
@@ -26,13 +25,15 @@ typedef struct edge {
 typedef struct graph_cuda {
   int V;
   int E;
-  edge_t* edge_array;
+  int* starts;
   int* weights;
+  edge_t* edge_array;
 } graph_cuda_t;
 
 
 graph_cuda_t* johnson_cuda_init(const int n, const double p, const unsigned long seed);
-//#endif
+void johnson_cuda(graph_cuda_t* gr, int* output);
+void free_cuda_graph(graph_cuda_t* g);
 
 void free_graph(graph_t* g);
 void johnson_parallel(graph_t *gr, int* output);

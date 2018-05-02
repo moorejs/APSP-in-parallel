@@ -84,10 +84,12 @@ graph_cuda_t *johnson_cuda_init(const int n, const double p, const unsigned long
       }
     }
   }
-  Edge *edge_array = new edge_t[E];
-  int *weights = new int[E];
+  edge_t *edge_array = new edge_t[E];
+  int* starts = new int[n + 1];  // Starting point for each edge
+  int* weights = new int[E];
   int ei = 0;
   for (int i = 0; i < n; i++) {
+    starts[i] = ei;
     for (int j = 0; j < n; j++) {
       if (adj_matrix[i*n + j] != 0
           && adj_matrix[i*n + j] != INT_MAX) {
@@ -97,16 +99,25 @@ graph_cuda_t *johnson_cuda_init(const int n, const double p, const unsigned long
       }
     }
   }
+  starts[n] = ei; // One extra
 
   delete[] adj_matrix;
 
-  graph_t *gr = new graph_cuda_t;
+  graph_cuda_t *gr = new graph_cuda_t;
   gr->V = n;
   gr->E = E;
   gr->edge_array = edge_array;
   gr->weights = weights;
+  gr->starts = starts;
 
   return gr;
+}
+
+void free_cuda_graph(graph_cuda_t* g) {
+  delete[] g->edge_array;
+  delete[] g->weights;
+  delete[] g->starts;
+  delete g;
 }
 
 #endif
@@ -159,14 +170,14 @@ inline bool bellman_ford(graph_t* gr, int* dist, int src) {
   return no_neg_cycle;
 }
 
-void johnson_parallel(graph_t *gr, int* output) {
+void johnson_parallel(graph_t* gr, int* output) {
 
   int V = gr->V;
 
   // Make new graph for Bellman-Ford
   // First, a new node q is added to the graph, connected by zero-weight edges
   // to each of the other nodes.
-  graph_t *bf_graph = new graph_t;
+  graph_t* bf_graph = new graph_t;
   bf_graph->V = V + 1;
   bf_graph->E = gr->E + V;
   bf_graph->edge_array = new Edge[bf_graph->E];
@@ -191,7 +202,7 @@ void johnson_parallel(graph_t *gr, int* output) {
   bool r = bellman_ford(bf_graph, h, V);
   if (!r) {
     std::cerr << "\nNegative Cycles Detected! Terminating Early\n";
-    return;
+    exit(1);
   }
   // Next the edges of the original graph are reweighted using the values computed
   // by the Bellman–Ford algorithm: an edge from u to v, having length
