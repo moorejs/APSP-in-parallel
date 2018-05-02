@@ -3,6 +3,7 @@
 #include <iostream> // cout
 #include <string> // string
 #include <sstream> // stringstream
+#include <chrono> // see Timer class
 
 inline bool correctness_check(int* output, int n_output, int* solution, int n_solution) {
   for (int i = 0; i < n_solution; i++) {
@@ -65,3 +66,19 @@ std::string get_solution_filename(std::string prefix, int n, double p, unsigned 
   return solution_filename.str();
 }
 
+class Timer {
+
+public:
+  Timer() {
+    start = std::chrono::high_resolution_clock::now();
+  };
+  ~Timer() {
+    std::chrono::time_point<std::chrono::high_resolution_clock> end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> start_to_end = end - start;
+    std::cout << "Timer runtime: " << start_to_end.count() << "\n\n";
+  };
+
+private:
+  std::chrono::time_point<std::chrono::high_resolution_clock> start;
+
+};
