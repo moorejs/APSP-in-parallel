@@ -47,14 +47,18 @@ $(OMP): $(OMP_OBJECTS)
 $(CUDA): $(CUDA_CPP_OBJECTS) $(CUDA_CU_OBJECTS)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $^ -o $@
 
+-include $(SEQ_OBJECTS:%.o=%.d)
+-include $(OMP_OBJECTS:%.o=%.d)
+-include $(CUDA_CPP_OBJECTS:%.o=%.d)
+
 $(OBJ_DIR)/seq-%.o: src/%.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) -MMD -c $< -o $@
 
 $(OBJ_DIR)/omp-%.o: src/%.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) -MMD -c $< -o $@
 
 $(OBJ_DIR)/cuda-cpp-%.o: src/%.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) -MMD -c $< -o $@
 
 $(OBJ_DIR)/cuda-cu-%.o: src/%.cu
 	$(NVCC) $(NVCCFLAGS) -c $< -o $@
