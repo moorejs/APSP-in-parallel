@@ -8,14 +8,11 @@
 
 #include "floyd_warshall.hpp"
 
-__global__ void kernel() {
-
-}
+#define THREADS_DIM 32
 
 __host__ void floyd_warshall_blocked_cuda() {
   std::cout << "We reached this far!\n";
 
-  kernel<<<1,1>>>();
 
   // from assignment 1
   int deviceCount;
@@ -77,7 +74,7 @@ __host__ void floyd_warshall_cuda(int* input, int* output, int n) {
 
   cudaMemcpy(device_graph, input, size, cudaMemcpyHostToDevice);
 
-  dim3 block_dim(32, 32, 1);
+  dim3 block_dim(THREADS_DIM, THREADS_DIM, 1);
   dim3 grid_dim((n + block_dim.x - 1) / block_dim.x,
                 (n + block_dim.y - 1) / block_dim.y);
   for (int k = 0; k < n; k++) {
