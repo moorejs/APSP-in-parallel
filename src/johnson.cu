@@ -38,11 +38,12 @@ __global__ void dijkstra_kernel(int* output, char* visited_global) {
     int u = min_distance(dist, visited, V);
     int u_start = starts[u];
     int u_end = starts[u+1];
+    int dist_u = dist[u];
     visited[u] = 1;
     for (int v_i = u_start; v_i < u_end; v_i++) {
       int v = edge_array[v_i].v;
-      if (!visited[v] && dist[u] != INT_MAX && dist[u] + weights[v_i] < dist[v])
-          dist[v] = dist[u] + weights[v_i];
+      if (!visited[v] && dist_u != INT_MAX && dist_u + weights[v_i] < dist[v])
+          dist[v] = dist_u + weights[v_i];
     }
   }
 }
@@ -59,7 +60,7 @@ __global__ void bellman_ford_kernel(int* dist) {
   int new_dist = weights[e] + dist[u];
   // Make ATOMIC
   if (dist[u] != INT_MAX && new_dist < dist[v])
-    atomicExch(&dist[v], new_dist);
+    atomicExch(&dist[v], new_dist); // Needs to have conditional be atomic too
 }
 
 __host__ bool bellman_ford_cuda(graph_cuda_t* gr, int* dist, int s) {
@@ -112,7 +113,7 @@ __host__ bool bellman_ford_cuda(graph_cuda_t* gr, int* dist, int s) {
 
 __host__ void johnson_cuda(graph_cuda_t* gr, int* output) {
 
-  cudaThreadSetCacheConfig(cudaFuncCachePreferL1);
+  //cudaThreadSetCacheConfig(cudaFuncCachePreferL1);
 
   int deviceCount;
   cudaGetDeviceCount(&deviceCount);
