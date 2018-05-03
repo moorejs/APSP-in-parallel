@@ -148,8 +148,7 @@ int main(int argc, char* argv[]) {
 		<< " with p=" << p << " and seed=" << seed << "\n";
       auto start = std::chrono::high_resolution_clock::now();
 #ifdef CUDA
-      std::cout << "CUDA!\n";
-      floyd_warshall_cuda(matrix, output, n_blocked);
+      floyd_warshall_blocked_cuda(matrix, output, n_blocked);
 #else
       floyd_warshall_blocked(matrix, output, n_blocked, block_size);
 #endif
