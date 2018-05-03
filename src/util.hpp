@@ -19,7 +19,7 @@ inline bool correctness_check(int* output, int n_output, int* solution, int n_so
   return true;
 }
 
-void print_usage() {
+inline void print_usage() {
   std::cout << "\nUsage: apsp [-n INT] [-p DOUBLE] [-a (f|j)] [-s LONG] [-b] [-c] [-t INT]\n";
 
   std::cout << "\t-h\t\tPrint this message\n";
@@ -60,7 +60,7 @@ inline void print_table_header(bool check_correctness) {
   print_table_break(check_correctness);
 }
 
-std::string get_solution_filename(std::string prefix, int n, double p, unsigned long seed) {
+inline std::string get_solution_filename(std::string prefix, int n, double p, unsigned long seed) {
   std::stringstream solution_filename;
   solution_filename << "solution_cache/" << prefix << "-sol-n"<< n << "-p" << p << "-s" << seed << ".bin";
   return solution_filename.str();

@@ -3,6 +3,4 @@ objs/*
 .vscode/*
 
 solution_cache/*
-apsp-seq
-apsp-omp
-apsp-cuda
+apsp-*
