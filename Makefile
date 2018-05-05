@@ -1,7 +1,7 @@
 # Override using CXX=clang++ make ...
 CXX ?= g++
 CXXFLAGS ?= -std=c++11 -Wall -Wextra -g -O3
-CXXFLAGS += $(EXTRA)
+CXXFLAGS += $(CXXEXTRA)
 LDFLAGS ?=
 
 ISPC ?= ispc
@@ -51,10 +51,10 @@ $(CUDA): LDFLAGS += -L/opt/cuda-8.0/lib64 -lcudart
 $(CUDA): NVCCFLAGS += -arch=compute_35 -code=sm_35
 endif
 
+all: $(SEQ) $(OMP) $(CUDA) $(SEQ_ISPC) $(OMP_ISPC)
+
 $(OBJ_DIR):
 	mkdir -p $@
-
-all: $(SEQ) $(OMP) $(CUDA) $(SEQ_ISPC) $(OMP_ISPC)
 
 $(SEQ): $(SEQ_OBJECTS)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $^ -o $@
