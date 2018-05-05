@@ -1,4 +1,4 @@
-#include <iostream> // cout
+#include <iostream>
 #include <algorithm>
 #include <stdio.h>
 
@@ -9,8 +9,6 @@
 #include "floyd_warshall.hpp"
 
 #define BLOCK_DIM 16
-#define TILE_DIM 32
-#define BLOCK_ROWS 8
 
 __forceinline__
 __host__ void check_cuda_error() {
@@ -20,27 +18,6 @@ __host__ void check_cuda_error() {
                 cudaGetErrorString(errCode) << "\n";
   }
 }
-
-__global__ void transposeCoalesced(int* output, const int* input) {
-  __shared__ float tile[TILE_DIM][TILE_DIM];
-
-  int x = blockIdx.x * TILE_DIM + threadIdx.x;
-  int y = blockIdx.y * TILE_DIM + threadIdx.y;
-  int width = gridDim.x * TILE_DIM;
-
-  for (int j = 0; j < TILE_DIM; j += BLOCK_ROWS)
-    tile[threadIdx.y+j][threadIdx.x] = input[(y+j)*width + x];
-
-  __syncthreads();
-
-  x = blockIdx.y * TILE_DIM + threadIdx.x;  // transpose block offset
-  y = blockIdx.x * TILE_DIM + threadIdx.y;
-
-  for (int j = 0; j < TILE_DIM; j += BLOCK_ROWS)
-    output[(y+j)*width + x] = tile[threadIdx.x][threadIdx.y + j];
-}
-
-
 
 __forceinline__
 __device__ void calc(int* graph, int n, int k, int i, int j) {
@@ -87,7 +64,7 @@ __global__ void floyd_warshall_block_kernel_phase1(int n, int k, int* graph) {
   C[bi*BLOCK_DIM + bj] = graph[k*BLOCK_DIM*n + k*BLOCK_DIM + bi*n + bj];
 
   __syncthreads();
-
+  
   block_calc(C, C, C, bi, bj);
 
   __syncthreads();
@@ -97,35 +74,8 @@ __global__ void floyd_warshall_block_kernel_phase1(int n, int k, int* graph) {
 
 }
 
+
 __global__ void floyd_warshall_block_kernel_phase2(int n, int k, int* graph) {
-  // BlockDim is one dimensional (Straight along diagonal)
-  // Blocks themselves are two dimensional
-  const unsigned int j = blockIdx.x;
-  const unsigned int bi = threadIdx.y;
-  const unsigned int bj = threadIdx.x;
-
-  if (j == k) return;
-
-  __shared__ int A[BLOCK_DIM * BLOCK_DIM];
-  __shared__ int C[BLOCK_DIM * BLOCK_DIM];
-
-  __syncthreads();
-
-  C[bi*BLOCK_DIM + bj] = graph[k*BLOCK_DIM*n + j*BLOCK_DIM + bi*n + bj];
-  A[bi*BLOCK_DIM + bj] = graph[k*BLOCK_DIM*n + k*BLOCK_DIM + bi*n + bj];
-
-  __syncthreads();
-
-  block_calc(C, A, C, bi, bj);
-
-  __syncthreads();
-
-  // Block C is the only one that could be changed
-  graph[k*BLOCK_DIM*n + j*BLOCK_DIM + bi*n + bj] = C[bi*BLOCK_DIM + bj];
-
-}
-
-__global__ void floyd_warshall_block_kernel_phase3(int n, int k, int* graph) {
   // BlockDim is one dimensional (Straight along diagonal)
   // Blocks themselves are two dimensional
   const unsigned int i = blockIdx.x;
@@ -134,6 +84,7 @@ __global__ void floyd_warshall_block_kernel_phase3(int n, int k, int* graph) {
 
   if (i == k) return;
 
+  __shared__ int A[BLOCK_DIM * BLOCK_DIM];
   __shared__ int B[BLOCK_DIM * BLOCK_DIM];
   __shared__ int C[BLOCK_DIM * BLOCK_DIM];
 
@@ -149,10 +100,24 @@ __global__ void floyd_warshall_block_kernel_phase3(int n, int k, int* graph) {
   __syncthreads();
 
   graph[i*BLOCK_DIM*n + k*BLOCK_DIM + bi*n + bj] = C[bi*BLOCK_DIM + bj];
+
+  // Phase 2 1/2
+
+  C[bi*BLOCK_DIM + bj] = graph[k*BLOCK_DIM*n + i*BLOCK_DIM + bi*n + bj];
+  A[bi*BLOCK_DIM + bj] = graph[k*BLOCK_DIM*n + k*BLOCK_DIM + bi*n + bj];
+
+  __syncthreads();
+
+  block_calc(C, A, C, bi, bj);
+
+  __syncthreads();
+
+  // Block C is the only one that could be changed
+  graph[k*BLOCK_DIM*n + i*BLOCK_DIM + bi*n + bj] = C[bi*BLOCK_DIM + bj];
 }
 
 
-__global__ void floyd_warshall_block_kernel_phase4(int n, int k, int* graph) {
+__global__ void floyd_warshall_block_kernel_phase3(int n, int k, int* graph) {
   // BlockDim is one dimensional (Straight along diagonal)
   // Blocks themselves are two dimensional
   const unsigned int j = blockIdx.x;
@@ -187,7 +152,7 @@ __global__ void floyd_warshall_block_kernel_phase4(int n, int k, int* graph) {
 
 __host__ void floyd_warshall_blocked_cuda(int* input, int* output, int n) {
 
-    int deviceCount;
+  int deviceCount;
   cudaGetDeviceCount(&deviceCount);
 
   for (int i = 0; i < deviceCount; i++) {
@@ -205,42 +170,23 @@ __host__ void floyd_warshall_blocked_cuda(int* input, int* output, int n) {
   cudaMalloc(&device_graph, size);
   cudaMemcpy(device_graph, input, size, cudaMemcpyHostToDevice);
 
-  const int blocks = n / BLOCK_DIM;
+  const int blocks = (n + BLOCK_DIM - 1) / BLOCK_DIM;
   dim3 block_dim(BLOCK_DIM, BLOCK_DIM, 1);
   dim3 phase4_grid(blocks, blocks, 1);
 
-  std::cout << "Launching Kernels --Blocks: " << blocks << " Size " << n << "\n";
+  std::cout << "Launching Kernels Blocks: " << blocks << " Size " << n << "\n";
   for (int k = 0; k < blocks; k++) {
     floyd_warshall_block_kernel_phase1<<<1, block_dim>>>(n, k, device_graph);
-    cudaThreadSynchronize();
-
-    check_cuda_error();
 
     floyd_warshall_block_kernel_phase2<<<blocks, block_dim>>>(n, k, device_graph);
-    cudaThreadSynchronize();
 
-    check_cuda_error();
-
-    floyd_warshall_block_kernel_phase3<<<blocks, block_dim>>>(n, k, device_graph);
-    cudaThreadSynchronize();
-
-    check_cuda_error();
-
-    floyd_warshall_block_kernel_phase4<<<phase4_grid, block_dim>>>(n, k, device_graph);
-    cudaThreadSynchronize();
-
-
-    check_cuda_error();
-
-
+    floyd_warshall_block_kernel_phase3<<<phase4_grid, block_dim>>>(n, k, device_graph);
   }
-
+  
   cudaMemcpy(output, device_graph, size, cudaMemcpyDeviceToHost);
   check_cuda_error();
 
   cudaFree(device_graph);
-
-
 }
 
 __host__ void floyd_warshall_cuda(int* input, int* output, int n) {
@@ -272,6 +218,7 @@ __host__ void floyd_warshall_cuda(int* input, int* output, int n) {
   dim3 block_dim(BLOCK_DIM, BLOCK_DIM, 1);
   dim3 grid_dim((n + block_dim.x - 1) / block_dim.x,
                 (n + block_dim.y - 1) / block_dim.y);
+  
   for (int k = 0; k < n; k++) {
     floyd_warshall_kernel<<<grid_dim, block_dim>>>(n, k, device_graph);
     cudaThreadSynchronize();

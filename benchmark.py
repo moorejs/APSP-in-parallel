@@ -79,6 +79,8 @@ parser.add_argument('-b', '--benchmark', choices=all_benchmarks.keys(), default=
 parser.add_argument('-v', '--verbose', action='store_true',
                     help='Print commands as they run')
 parser.add_argument('-g', '--cuda', action='store_true', help='Run CUDA version')
+parser.add_argument('-r', '--compare', action='store_true', help='Compare different parallel schemes. Recommended to be used with "-b serious"')
+
 args = parser.parse_args()
 
 def create_cmd(params):
@@ -146,4 +148,57 @@ def run_bench(bench_list, algorithm, seed, block_size, verbose, cuda, caching_se
     print ' {0:-^52} '.format('')
     print ''
 
-run_bench(all_benchmarks[args.benchmark], args.algorithm, args.seed, args.block_size, args.verbose, args.cuda)
+def run_par_bench(bench_list, algorithm, seed, block_size, verbose, caching_seq=True, seq_cache={}):
+    
+    print ''
+    print ' {0:-^54} '.format('')
+    print '|{0:^54}|'.format('  Benchmark for {0}\'s Algorithm  '
+                             .format('Floyd-Warshall' if algorithm is 'f' else 'Johnson'))
+    print '|{0:^54}|'.format('seed = {0}{1}'.format(seed, ', block size = {0}'.format(block_size) if algorithm is 'f' else ''))
+    print ' {0:-^54} '.format('')
+    print '| {0:<4} | {1:<5} | {2:<2} | {3:<8} | {4:<8} | {5:<8} |'.format('p', 'n', 't', 'ISPC (ms)',
+                                                                     'OMP (ms)', 'CUDA (ms)')
+
+    for bench in bench_list:
+        print ' {0:-^54} '.format('')
+
+        for param_obj in bench:
+            param_obj['a'] = algorithm
+            param_obj['s'] = seed
+            param_obj['d'] = block_size
+            params = create_cmd(param_obj)
+
+            stdout, stderr = run_cmd(['./apsp-omp'] + params, verbose)
+            if len(stderr):
+                print 'OMP Error: ' + stderr
+                return
+            omp_time = extract_time(stdout)
+
+            stdout, stderr = run_cmd(['./apsp-omp-ispc'] + params, verbose)
+            if len(stderr):
+                print 'OMP ISPC Error: ' + stderr
+                return
+            omp_ispc_time = extract_time(stdout)
+            
+            stdout, stderr = run_cmd(['./apsp-cuda'] + params,verbose)
+            if len(stderr):
+                print 'CUDA Error: ' + stderr
+                return
+
+            cuda_time = extract_time(stdout)
+
+            print '| {p:>4.2f} | {n:>5} | {t:>2} | {0:>9.1f} | {1:>8.1f} | {2:>9.1f} |'.format(omp_ispc_time, omp_time,
+                                                                                             cuda_time,
+                                                                                             **param_obj)
+
+    print ' {0:-^52} '.format('')
+    print ''
+
+
+def choose_benchmark():
+    if (args.compare):
+        run_par_bench(all_benchmarks[args.benchmark], args.algorithm, args.seed, args.block_size, args.verbose)
+    else:
+        run_bench(all_benchmarks[args.benchmark], args.algorithm, args.seed, args.block_size, args.verbose, args.cuda)
+
+choose_benchmark()
