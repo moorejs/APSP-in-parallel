@@ -1,6 +1,7 @@
 # Override using CXX=clang++ make ...
 CXX ?= g++
 CXXFLAGS ?= -std=c++11 -Wall -Wextra -g -O3
+CXXFLAGS += $(EXTRA)
 LDFLAGS ?=
 
 ISPC ?= ispc
@@ -50,6 +51,9 @@ $(CUDA): LDFLAGS += -L/opt/cuda-8.0/lib64 -lcudart
 $(CUDA): NVCCFLAGS += -arch=compute_35 -code=sm_35
 endif
 
+$(OBJ_DIR):
+	mkdir -p $@
+
 all: $(SEQ) $(OMP) $(CUDA) $(SEQ_ISPC) $(OMP_ISPC)
 
 $(SEQ): $(SEQ_OBJECTS)
@@ -71,30 +75,29 @@ $(OMP_ISPC): $(ISPC_OMP_OBJECTS) $(ISPC_OBJECTS)
 -include $(OMP_OBJECTS:%.o=%.d)
 -include $(CUDA_CPP_OBJECTS:%.o=%.d)
 
-$(OBJ_DIR)/seq-%.o: $(SRC_DIR)/%.cpp
+$(OBJ_DIR)/seq-%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
 	$(CXX) $(CXXFLAGS) -MMD -c $< -o $@
 
-$(OBJ_DIR)/omp-%.o: $(SRC_DIR)/%.cpp
+$(OBJ_DIR)/omp-%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
 	$(CXX) $(CXXFLAGS) -MMD -c $< -o $@
 
-$(OBJ_DIR)/cuda-cpp-%.o: $(SRC_DIR)/%.cpp
+$(OBJ_DIR)/cuda-cpp-%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
 	$(CXX) $(CXXFLAGS) -MMD -c $< -o $@
 
-$(OBJ_DIR)/cuda-cu-%.o: $(SRC_DIR)/%.cu
+$(OBJ_DIR)/cuda-cu-%.o: $(SRC_DIR)/%.cu | $(OBJ_DIR)
 	$(NVCC) $(NVCCFLAGS) -c $< -o $@
 
-$(OBJ_DIR)/ispc-seq-%.o: $(SRC_DIR)/%.cpp
+$(OBJ_DIR)/ispc-seq-%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
 	$(CXX) $(CXXFLAGS) -MMD -c $< -o $@
 
-$(OBJ_DIR)/ispc-omp-%.o: $(SRC_DIR)/%.cpp
+$(OBJ_DIR)/ispc-omp-%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
 	$(CXX) $(CXXFLAGS) -MMD -c $< -o $@
 
-$(OBJ_DIR)/ispc-%.o: $(SRC_DIR)/%.ispc
+$(OBJ_DIR)/ispc-%.o: $(SRC_DIR)/%.ispc | $(OBJ_DIR)
 	$(ISPC) $(ISPCFLAGS) $< -o $@
 # we do not output a header here on purpose
 
 clean:
 	$(RM) -r $(OBJ_DIR)
-
 	$(RM) $(SEQ) $(OMP) $(CUDA) $(SEQ_ISPC) $(OMP_ISPC)
 
